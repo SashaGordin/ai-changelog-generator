@@ -76,12 +76,5 @@ pnpm dev
 
 ## Demo
 
-[Link to your screen recording]
+[[Link to your screen recording]](https://www.loom.com/share/334b3cfba83845baa9d772c2de72074a?sid=21dbba3d-f1ec-4a80-ab2e-f36e7c8d8ad9)
 
-## License
-
-MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
