@@ -58,6 +58,7 @@ export async function POST(request: Request) {
 
         // If all commits are already processed, return an error
         if (newCommits.length === 0) {
+          console.log("All commits have already been processed");
           throw new Error("All commits have already been processed");
         }
 
