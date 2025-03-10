@@ -10,10 +10,15 @@ interface Commit {
   date: string;
 }
 
+interface ChangelogDraft {
+  title: string;
+  content: string;
+}
+
 export default function DevPage() {
   const [repoPath, setRepoPath] = useState("");
   const [commits, setCommits] = useState<Commit[]>([]);
-  const [changelog, setChangelog] = useState("");
+  const [changelogDraft, setChangelogDraft] = useState<ChangelogDraft | null>(null);
   const [editableChangelog, setEditableChangelog] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,13 +52,12 @@ export default function DevPage() {
       const res = await fetch("/api/generate-changelog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commits, repoPath }),
+        body: JSON.stringify({ commits }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate changelog");
-      const content = data.changelog.content;
-      setChangelog(content);
-      setEditableChangelog(content);
+      setChangelogDraft(data.changelog);
+      setEditableChangelog(data.changelog.content);
       toast.success("Changelog generated successfully!");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
@@ -65,6 +69,8 @@ export default function DevPage() {
   };
 
   const submitChangelog = async () => {
+    if (!changelogDraft) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -81,7 +87,7 @@ export default function DevPage() {
       if (!res.ok) throw new Error(data.error || "Failed to submit changelog");
 
       setCommits([]);
-      setChangelog("");
+      setChangelogDraft(null);
       setEditableChangelog("");
       toast.success("Changelog submitted successfully!");
     } catch (err) {
@@ -147,7 +153,7 @@ export default function DevPage() {
         </div>
       )}
 
-      {changelog && (
+      {changelogDraft && (
         <div className="mt-6">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xl font-semibold text-gray-800">Changelog Preview</h2>
