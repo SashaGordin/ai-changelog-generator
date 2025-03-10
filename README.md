@@ -29,7 +29,7 @@ An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to 
 
 ### AI-Powered Development
 - **Cursor AI**: Used as the primary IDE with AI pair programming capabilities, significantly speeding up development and helping with code generation, debugging, and refactoring
-- **Grok**: Leveraged for understanding complex code patterns and architectural decisions, particularly helpful with Next.js App Router and Drizzle ORM integration
+- **Grok**: Particularly helpful with Next.js App Router and Drizzle ORM integration
 - **GPT-4**: Powers the changelog generation, transforming technical commit messages into user-friendly changelog entries
 
 ## Setup
