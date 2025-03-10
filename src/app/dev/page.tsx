@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 interface Commit {
   message: string;
@@ -13,8 +14,10 @@ export default function DevPage() {
   const [repoPath, setRepoPath] = useState("");
   const [commits, setCommits] = useState<Commit[]>([]);
   const [changelog, setChangelog] = useState("");
+  const [editableChangelog, setEditableChangelog] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPreview, setIsPreview] = useState(true);
 
   const fetchCommits = async () => {
     setLoading(true);
@@ -29,7 +32,9 @@ export default function DevPage() {
       if (!res.ok) throw new Error(data.error || "Failed to fetch commits");
       setCommits(data.commits);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -46,11 +51,43 @@ export default function DevPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate changelog");
-      setChangelog(data.changelog.content);
-      // Clear commits after successful generation
-      setCommits([]);
+      const content = data.changelog.content;
+      setChangelog(content);
+      setEditableChangelog(content);
+      toast.success("Changelog generated successfully!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitChangelog = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/submit-changelog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: editableChangelog,
+          commits,
+          repoPath,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit changelog");
+
+      setCommits([]);
+      setChangelog("");
+      setEditableChangelog("");
+      toast.success("Changelog submitted successfully!");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -112,10 +149,37 @@ export default function DevPage() {
 
       {changelog && (
         <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-3 text-gray-800">Changelog Preview</h2>
-          <div className="p-4 bg-gray-50 border rounded-md shadow-sm">
-            <ReactMarkdown>{changelog}</ReactMarkdown>
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-xl font-semibold text-gray-800">Changelog Preview</h2>
+            <div className="space-x-2">
+              <button
+                onClick={() => setIsPreview(!isPreview)}
+                className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                {isPreview ? "Edit" : "Preview"}
+              </button>
+              <button
+                onClick={submitChangelog}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={loading}
+              >
+                {loading ? "Submitting..." : "Submit Changelog"}
+              </button>
+            </div>
           </div>
+
+          {isPreview ? (
+            <div className="p-4 bg-gray-50 border rounded-md shadow-sm">
+              <ReactMarkdown>{editableChangelog}</ReactMarkdown>
+            </div>
+          ) : (
+            <textarea
+              value={editableChangelog}
+              onChange={(e) => setEditableChangelog(e.target.value)}
+              className="w-full h-64 p-4 border rounded-md shadow-sm font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            />
+          )}
         </div>
       )}
     </div>
