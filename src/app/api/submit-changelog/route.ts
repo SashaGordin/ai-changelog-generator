@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/db";
 import { changelogs, processedCommits } from "@/app/db/schema";
+import { inArray } from "drizzle-orm";
 import type { ChangeType } from "../generate-changelog/route";
 
 interface Commit {
@@ -13,7 +14,7 @@ const validChangeTypes = ["Feature", "Update", "Fix", "Breaking", "Security"] as
 
 export async function POST(request: Request) {
   try {
-    const { content, commits, repoPath, type, date } = await request.json();
+    const { content, commits, repoUrl, type, date } = await request.json();
 
     if (!content || typeof content !== "string") {
       return NextResponse.json(
@@ -27,9 +28,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!repoPath || typeof repoPath !== "string") {
+    if (!repoUrl || typeof repoUrl !== "string") {
       return NextResponse.json(
-        { error: "Valid repoPath is required" },
+        { error: "Valid GitHub repository URL is required" },
         { status: 400 }
       );
     }
@@ -42,32 +43,53 @@ export async function POST(request: Request) {
 
     const title = new Date(date).toLocaleString('default', { month: 'long' }) + ", " + new Date(date).getFullYear();
 
-    // Save changelog and processed commits in a transaction
-    const [newChangelog] = await db.transaction(async (tx) => {
-      const [changelog] = await tx
-        .insert(changelogs)
-        .values({ title, content, type })
-        .returning();
+    try {
+      // Save changelog and processed commits in a transaction
+      const [newChangelog] = await db.transaction(async (tx) => {
+        // First, check which commits are already processed
+        const commitHashes = commits.map(c => c.hash);
+        const existingCommits = await tx
+          .select({ hash: processedCommits.hash })
+          .from(processedCommits)
+          .where(inArray(processedCommits.hash, commitHashes));
 
-      // Store all processed commits
-      await tx.insert(processedCommits).values(
-        commits.map((commit: Commit) => ({
-          hash: commit.hash,
-          message: commit.message,
-          date: new Date(commit.date),
-          repoPath,
-          changelogId: changelog.id,
-        }))
-      );
+        const existingHashes = new Set(existingCommits.map(c => c.hash));
+        const newCommits = commits.filter(commit => !existingHashes.has(commit.hash));
 
-      return [changelog];
-    });
+        // If all commits are already processed, return an error
+        if (newCommits.length === 0) {
+          throw new Error("All commits have already been processed");
+        }
 
-    return NextResponse.json({ changelog: newChangelog });
+        const [changelog] = await tx
+          .insert(changelogs)
+          .values({ title, content, type })
+          .returning();
+
+        // Store only new commits
+        await tx.insert(processedCommits).values(
+          newCommits.map((commit: Commit) => ({
+            hash: commit.hash,
+            message: commit.message,
+            date: new Date(commit.date),
+            repoUrl: repoUrl,
+            changelogId: changelog.id,
+          }))
+        );
+
+        return [changelog];
+      });
+
+      return NextResponse.json({ changelog: newChangelog });
+    } catch (dbError) {
+      console.error("Database error:", dbError);
+      throw new Error(`Database operation failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
+    }
   } catch (error) {
     console.error("Error submitting changelog:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(
-      { error: "Failed to submit changelog" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

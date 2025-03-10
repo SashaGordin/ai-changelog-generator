@@ -13,7 +13,7 @@ export const processedCommits = pgTable("processed_commits", {
   hash: text("hash").notNull().unique(),
   message: text("message").notNull(),
   date: timestamp("date").notNull(),
-  repoPath: text("repo_path").notNull(),
+  repoUrl: text("repo_url").notNull(),
   changelogId: serial("changelog_id").references(() => changelogs.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

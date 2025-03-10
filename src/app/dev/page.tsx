@@ -21,7 +21,7 @@ interface ChangelogDraft {
 const changeTypes: ChangeType[] = ["Feature", "Update", "Fix", "Breaking", "Security"];
 
 export default function DevPage() {
-  const [repoPath, setRepoPath] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
   const [commits, setCommits] = useState<Commit[]>([]);
   const [changelogDraft, setChangelogDraft] = useState<ChangelogDraft | null>(null);
   const [editableChangelog, setEditableChangelog] = useState("");
@@ -41,7 +41,7 @@ export default function DevPage() {
       const res = await fetch("/api/commits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoPath }),
+        body: JSON.stringify({ repoUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch commits");
@@ -99,7 +99,7 @@ export default function DevPage() {
         body: JSON.stringify({
           content: editableChangelog,
           commits,
-          repoPath,
+          repoUrl,
           type: selectedType,
           date: changelogDraft.date,
         }),
@@ -128,20 +128,20 @@ export default function DevPage() {
 
         <div className="mb-6">
           <label className="block mb-2 text-sm font-medium">
-            Local Repository Path
+            GitHub Repository URL
           </label>
           <input
             type="text"
-            value={repoPath}
-            onChange={(e) => setRepoPath(e.target.value)}
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
             className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="/Users/Sasha/Dev/my-repo"
+            placeholder="https://github.com/username/repository"
             disabled={isFetchingCommits}
           />
           <button
             onClick={fetchCommits}
             className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 relative"
-            disabled={isFetchingCommits || !repoPath.trim()}
+            disabled={isFetchingCommits || !repoUrl.trim()}
           >
             {isFetchingCommits ? (
               <>

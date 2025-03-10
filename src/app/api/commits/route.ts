@@ -1,45 +1,53 @@
 import { NextResponse } from "next/server";
-import simpleGit from "simple-git";
 import { db } from "@/app/db";
 import { processedCommits } from "@/app/db/schema";
 import { eq } from "drizzle-orm";
+import { parseGitHubUrl } from "@/app/utils/github";
+import { env } from "@/env";
+import { Octokit } from "@octokit/rest";
+
+const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
 
 export async function POST(request: Request) {
   try {
-    const { repoPath } = await request.json();
-    if (!repoPath || typeof repoPath !== "string") {
+    const { repoUrl } = await request.json();
+    if (!repoUrl || typeof repoUrl !== "string") {
       return NextResponse.json(
-        { error: "Valid repoPath is required" },
+        { error: "Valid GitHub repository URL is required" },
         { status: 400 }
       );
     }
 
-    const git = simpleGit(repoPath);
-    const log = await git.log({ maxCount: 50 }); // Last 50 commits
+    const { owner, repo } = parseGitHubUrl(repoUrl);
 
-    // Get all processed commit hashes for this repo
+    // Get commits from GitHub
+    const { data: commits } = await octokit.rest.repos.listCommits({
+      owner,
+      repo,
+      per_page: 50,
+    });
+
+    // Get processed commit hashes for this repo
     const processed = await db
       .select({ hash: processedCommits.hash })
       .from(processedCommits)
-      .where(eq(processedCommits.repoPath, repoPath));
+      .where(eq(processedCommits.repoUrl, repoUrl));
 
     const processedHashes = new Set(processed.map(p => p.hash));
 
-    // Filter out already processed commits
-    const commits = log.all
-      .filter(commit => !processedHashes.has(commit.hash))
-      .map((commit) => ({
-        message: commit.message,
-        date: commit.date,
-        hash: commit.hash,
+    // Filter out already processed commits and format the response
+    const newCommits = commits
+      .filter(commit => !processedHashes.has(commit.sha))
+      .map(commit => ({
+        message: commit.commit.message,
+        date: commit.commit.author?.date || new Date().toISOString(),
+        hash: commit.sha,
       }));
 
-    return NextResponse.json({ commits });
+    return NextResponse.json({ commits: newCommits });
   } catch (error) {
     console.error("Error fetching commits:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch commits" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Failed to fetch commits";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
