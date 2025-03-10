@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Changelog Generator
 
-## Getting Started
+An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to automatically create meaningful, user-focused changelog entries from your commits.
 
-First, run the development server:
+## Features
 
+- 🤖 AI-powered changelog generation using GPT-4
+- 🔄 Direct GitHub repository integration
+- 🎯 Smart commit deduplication to prevent duplicate entries
+- 📝 Editable changelog entries before submission
+- 🏷️ Categorization of changes (Feature, Update, Fix, Breaking, Security)
+- 📱 Responsive, modern UI with a clean design
+- 📊 Organized changelog view by month and year
+
+## Technical Decisions
+
+### Architecture
+- **Next.js 14**: Chosen for its App Router, server components, and API routes
+- **PostgreSQL + Drizzle ORM**: Type-safe database operations with minimal boilerplate
+- **TypeScript**: For enhanced type safety and better developer experience
+- **Tailwind CSS**: For rapid UI development and consistent styling
+
+### Design Decisions
+- **Two-View System**: Separated developer tools from the public changelog view
+- **Simple Navigation**: Toggle button between views instead of a nav bar for minimal UI
+- **GitHub Integration**: Moved from local git to GitHub API for better accessibility
+- **Transaction-based Saves**: Ensures data consistency between changelogs and commits
+- **Optimistic UI**: Loading states and toast notifications for better UX
+
+## Setup
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/ai-changelog-generator.git
+cd ai-changelog-generator
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+pnpm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up your environment variables in `.env`:
+```env
+DATABASE_URL=your_postgres_database_url
+OPENAI_API_KEY=your_openai_api_key
+GITHUB_TOKEN=your_github_personal_access_token
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run database migrations:
+```bash
+pnpm drizzle-kit push:pg
+```
 
-## Learn More
+5. Start the development server:
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Usage
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Navigate to the developer view by clicking "Switch to Dev"
+2. Enter a GitHub repository URL
+3. Click "Fetch New Commits" to get recent commits
+4. Select the change type (Feature, Update, etc.)
+5. Click "Generate Changelog" to create an AI-generated entry
+6. Edit the entry if needed
+7. Click "Submit" to save the changelog
+8. View the formatted changelog in the public view
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment Variables
 
-## Deploy on Vercel
+- `DATABASE_URL`: PostgreSQL connection string
+- `OPENAI_API_KEY`: OpenAI API key for GPT-4 access
+- `GITHUB_TOKEN`: GitHub Personal Access Token with repo access
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Demo
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[Link to your screen recording]
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
