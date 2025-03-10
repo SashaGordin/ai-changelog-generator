@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { ChangeType } from "@/app/api/generate-changelog/route";
 
 interface Commit {
   message: string;
@@ -13,13 +13,18 @@ interface Commit {
 interface ChangelogDraft {
   title: string;
   content: string;
+  date: string;
+  type: ChangeType;
 }
+
+const changeTypes: ChangeType[] = ["Feature", "Update", "Fix", "Breaking", "Security"];
 
 export default function DevPage() {
   const [repoPath, setRepoPath] = useState("");
   const [commits, setCommits] = useState<Commit[]>([]);
   const [changelogDraft, setChangelogDraft] = useState<ChangelogDraft | null>(null);
   const [editableChangelog, setEditableChangelog] = useState("");
+  const [selectedType, setSelectedType] = useState<ChangeType>("Feature");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPreview, setIsPreview] = useState(true);
@@ -52,7 +57,7 @@ export default function DevPage() {
       const res = await fetch("/api/generate-changelog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commits }),
+        body: JSON.stringify({ commits, type: selectedType }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate changelog");
@@ -81,6 +86,8 @@ export default function DevPage() {
           content: editableChangelog,
           commits,
           repoPath,
+          type: selectedType,
+          date: changelogDraft.date,
         }),
       });
       const data = await res.json();
@@ -101,10 +108,10 @@ export default function DevPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Changelog Generator</h1>
+      <h1 className="text-3xl font-bold mb-6">Changelog Generator</h1>
 
       <div className="mb-6">
-        <label className="block mb-2 text-sm font-medium text-gray-700">
+        <label className="block mb-2 text-sm font-medium">
           Local Repository Path
         </label>
         <input
@@ -126,9 +133,24 @@ export default function DevPage() {
 
       {commits.length > 0 && (
         <div className="mb-6">
-          <label className="block mb-2 text-sm font-medium text-gray-700">
-            New Commits to Process
-          </label>
+          <div className="flex justify-between items-center mb-4">
+            <label className="block text-sm font-medium">
+              New Commits to Process
+            </label>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium">Type:</label>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as ChangeType)}
+                className="p-2 border rounded-md shadow-sm text-sm"
+                disabled={loading}
+              >
+                {changeTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="border rounded-md shadow-sm bg-gray-50 p-4 max-h-60 overflow-y-auto">
             {commits.map((commit) => (
               <div key={commit.hash} className="mb-3 last:mb-0">
@@ -156,7 +178,19 @@ export default function DevPage() {
       {changelogDraft && (
         <div className="mt-6">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xl font-semibold text-gray-800">Changelog Preview</h2>
+            <div>
+              <h2 className="text-xl font-semibold">{changelogDraft.title}</h2>
+              <div className="flex items-center mt-2 space-x-2">
+                <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800 font-medium">
+                  {selectedType}
+                </span>
+                {changelogDraft.date && (
+                  <span className="text-sm text-gray-500">
+                    {new Date(changelogDraft.date).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            </div>
             <div className="space-x-2">
               <button
                 onClick={() => setIsPreview(!isPreview)}
@@ -175,14 +209,14 @@ export default function DevPage() {
           </div>
 
           {isPreview ? (
-            <div className="p-4 bg-gray-50 border rounded-md shadow-sm">
-              <ReactMarkdown>{editableChangelog}</ReactMarkdown>
+            <div className="p-4 bg-gray-50 border rounded-md shadow-sm prose prose-sm max-w-none">
+              {editableChangelog}
             </div>
           ) : (
             <textarea
               value={editableChangelog}
               onChange={(e) => setEditableChangelog(e.target.value)}
-              className="w-full h-64 p-4 border rounded-md shadow-sm font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-32 p-4 border rounded-md shadow-sm font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loading}
             />
           )}

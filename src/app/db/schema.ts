@@ -4,6 +4,7 @@ export const changelogs = pgTable("changelogs", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
+  type: text("type").notNull().default("Feature"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

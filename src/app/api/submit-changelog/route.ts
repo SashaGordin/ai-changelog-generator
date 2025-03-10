@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/db";
 import { changelogs, processedCommits } from "@/app/db/schema";
+import type { ChangeType } from "../generate-changelog/route";
 
 interface Commit {
   message: string;
@@ -8,9 +9,11 @@ interface Commit {
   date: string;
 }
 
+const validChangeTypes = ["Feature", "Update", "Fix", "Breaking", "Security"] as const;
+
 export async function POST(request: Request) {
   try {
-    const { content, commits, repoPath } = await request.json();
+    const { content, commits, repoPath, type, date } = await request.json();
 
     if (!content || typeof content !== "string") {
       return NextResponse.json(
@@ -30,14 +33,20 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (!type || !validChangeTypes.includes(type as ChangeType)) {
+      return NextResponse.json(
+        { error: "Valid change type is required" },
+        { status: 400 }
+      );
+    }
 
-    const title = `Changelog ${new Date().toISOString().split("T")[0]}`;
+    const title = new Date(date).toLocaleString('default', { month: 'long' }) + ", " + new Date(date).getFullYear();
 
     // Save changelog and processed commits in a transaction
     const [newChangelog] = await db.transaction(async (tx) => {
       const [changelog] = await tx
         .insert(changelogs)
-        .values({ title, content })
+        .values({ title, content, type })
         .returning();
 
       // Store all processed commits
