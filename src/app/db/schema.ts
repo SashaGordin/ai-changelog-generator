@@ -6,3 +6,13 @@ export const changelogs = pgTable("changelogs", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const processedCommits = pgTable("processed_commits", {
+  id: serial("id").primaryKey(),
+  hash: text("hash").notNull().unique(),
+  message: text("message").notNull(),
+  date: timestamp("date").notNull(),
+  repoPath: text("repo_path").notNull(),
+  changelogId: serial("changelog_id").references(() => changelogs.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

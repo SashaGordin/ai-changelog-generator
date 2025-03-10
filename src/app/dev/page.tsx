@@ -3,9 +3,15 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
+interface Commit {
+  message: string;
+  hash: string;
+  date: string;
+}
+
 export default function DevPage() {
   const [repoPath, setRepoPath] = useState("");
-  const [commits, setCommits] = useState<any[]>([]);
+  const [commits, setCommits] = useState<Commit[]>([]);
   const [changelog, setChangelog] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,11 +42,13 @@ export default function DevPage() {
       const res = await fetch("/api/generate-changelog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commits }),
+        body: JSON.stringify({ commits, repoPath }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate changelog");
       setChangelog(data.changelog.content);
+      // Clear commits after successful generation
+      setCommits([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -69,23 +77,23 @@ export default function DevPage() {
           className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
           disabled={loading}
         >
-          {loading ? "Fetching..." : "Fetch Commits"}
+          {loading ? "Fetching..." : "Fetch New Commits"}
         </button>
       </div>
 
       {commits.length > 0 && (
         <div className="mb-6">
           <label className="block mb-2 text-sm font-medium text-gray-700">
-            Commits (Edit as Needed)
+            New Commits to Process
           </label>
-          <textarea
-            value={commits.map((c) => c.message).join("\n")}
-            onChange={(e) =>
-              setCommits(e.target.value.split("\n").map((msg) => ({ message: msg })))
-            }
-            className="w-full p-3 border rounded-md shadow-sm h-40 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading}
-          />
+          <div className="border rounded-md shadow-sm bg-gray-50 p-4 max-h-60 overflow-y-auto">
+            {commits.map((commit) => (
+              <div key={commit.hash} className="mb-3 last:mb-0">
+                <div className="text-sm text-gray-600">{new Date(commit.date).toLocaleString()}</div>
+                <div className="text-gray-800">{commit.message}</div>
+              </div>
+            ))}
+          </div>
           <button
             onClick={generateChangelog}
             className="mt-3 w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400"
