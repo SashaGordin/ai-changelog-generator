@@ -25,17 +25,16 @@ export async function POST(request: Request) {
     const commitMessages = commits.map((c: Commit) => c.message).join("\n");
 
     const prompt = `
-      Create a concise, impactful changelog entry from these commits.
-      The entry should be a single, cohesive summary of the overall changes, not a list of individual commits.
-      Focus on the user impact and value delivered.
+      Create a concise changelog entry summarizing these commits.
+      Write a single, impactful sentence that captures the main user-facing changes.
+      Start with an action verb (Added, Updated, Released, Launched, etc.).
+      Keep it brief and focused on user value.
+      Do not use quotes in the response.
 
-      Format the response as a single paragraph without bullet points.
-      Start with an action verb like "Added", "Updated", "Released", "Launched", etc.
-      Keep technical details minimal unless they're important for users.
-      Make it easy for non-technical users to understand.
-
-      Example format:
-      "Released a research preview of GPT-4.5—our largest and most capable chat model yet. GPT-4.5's high "EQ" and understanding of user intent make it better at creative tasks and agentic planning."
+      Example outputs:
+      Added metadata field support to fine-tuning jobs.
+      Released GPT-4.5 with improved creative abilities and agentic planning.
+      Updated Admin API with key rotation and user invitation features.
 
       Commits to summarize:
       ${commitMessages}
@@ -45,9 +44,10 @@ export async function POST(request: Request) {
       model: "gpt-4",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 500,
+      temperature: 0.7,
     });
 
-    const content = completion.choices[0]?.message.content || "";
+    const content = completion.choices[0]?.message.content?.replace(/['"]/g, '') || "";
     const date = new Date();
     const month = date.toLocaleString('default', { month: 'long' });
     const year = date.getFullYear();

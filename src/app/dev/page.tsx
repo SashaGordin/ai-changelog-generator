@@ -25,12 +25,16 @@ export default function DevPage() {
   const [changelogDraft, setChangelogDraft] = useState<ChangelogDraft | null>(null);
   const [editableChangelog, setEditableChangelog] = useState("");
   const [selectedType, setSelectedType] = useState<ChangeType>("Feature");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPreview, setIsPreview] = useState(true);
 
+  // Separate loading states
+  const [isFetchingCommits, setIsFetchingCommits] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const fetchCommits = async () => {
-    setLoading(true);
+    setIsFetchingCommits(true);
     setError(null);
     try {
       const res = await fetch("/api/commits", {
@@ -40,18 +44,27 @@ export default function DevPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch commits");
+
+      if (data.commits.length === 0) {
+        toast.info("No new commits found to process", {
+          description: "All commits have already been included in the changelog."
+        });
+      } else {
+        toast.success(`Found ${data.commits.length} new commits to process`);
+      }
+
       setCommits(data.commits);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setLoading(false);
+      setIsFetchingCommits(false);
     }
   };
 
   const generateChangelog = async () => {
-    setLoading(true);
+    setIsGenerating(true);
     setError(null);
     try {
       const res = await fetch("/api/generate-changelog", {
@@ -69,14 +82,14 @@ export default function DevPage() {
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setLoading(false);
+      setIsGenerating(false);
     }
   };
 
   const submitChangelog = async () => {
     if (!changelogDraft) return;
 
-    setLoading(true);
+    setIsSubmitting(true);
     setError(null);
     try {
       const res = await fetch("/api/submit-changelog", {
@@ -102,7 +115,7 @@ export default function DevPage() {
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -120,14 +133,23 @@ export default function DevPage() {
           onChange={(e) => setRepoPath(e.target.value)}
           className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="/Users/Sasha/Dev/my-repo"
-          disabled={loading}
+          disabled={isFetchingCommits}
         />
         <button
           onClick={fetchCommits}
-          className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
-          disabled={loading}
+          className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 relative"
+          disabled={isFetchingCommits || !repoPath.trim()}
         >
-          {loading ? "Fetching..." : "Fetch New Commits"}
+          {isFetchingCommits ? (
+            <>
+              <span className="opacity-0">Fetch New Commits</span>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+              </div>
+            </>
+          ) : (
+            "Fetch New Commits"
+          )}
         </button>
       </div>
 
@@ -143,7 +165,7 @@ export default function DevPage() {
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value as ChangeType)}
                 className="p-2 border rounded-md shadow-sm text-sm"
-                disabled={loading}
+                disabled={isGenerating}
               >
                 {changeTypes.map(type => (
                   <option key={type} value={type}>{type}</option>
@@ -161,10 +183,19 @@ export default function DevPage() {
           </div>
           <button
             onClick={generateChangelog}
-            className="mt-3 w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400"
-            disabled={loading || commits.length === 0}
+            className="mt-3 w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 relative"
+            disabled={isGenerating || commits.length === 0}
           >
-            {loading ? "Generating..." : "Generate Changelog"}
+            {isGenerating ? (
+              <>
+                <span className="opacity-0">Generate Changelog</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                </div>
+              </>
+            ) : (
+              "Generate Changelog"
+            )}
           </button>
         </div>
       )}
@@ -195,15 +226,25 @@ export default function DevPage() {
               <button
                 onClick={() => setIsPreview(!isPreview)}
                 className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                disabled={isSubmitting}
               >
                 {isPreview ? "Edit" : "Preview"}
               </button>
               <button
                 onClick={submitChangelog}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                disabled={loading}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 min-w-[100px] relative"
+                disabled={isSubmitting}
               >
-                {loading ? "Submitting..." : "Submit Changelog"}
+                {isSubmitting ? (
+                  <>
+                    <span className="opacity-0">Submit</span>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    </div>
+                  </>
+                ) : (
+                  "Submit"
+                )}
               </button>
             </div>
           </div>
@@ -217,7 +258,7 @@ export default function DevPage() {
               value={editableChangelog}
               onChange={(e) => setEditableChangelog(e.target.value)}
               className="w-full h-32 p-4 border rounded-md shadow-sm font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={loading}
+              disabled={isSubmitting}
             />
           )}
         </div>
