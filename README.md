@@ -1,6 +1,6 @@
 # AI Changelog Generator
 
-An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to automatically create meaningful, user-focused changelog entries from your commits.
+An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to automatically create meaningful, user-focused changelog entries from your code changes.
 
 ## Features
 
@@ -11,6 +11,7 @@ An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to 
 - 🏷️ Categorization of changes (Feature, Update, Fix, Breaking, Security)
 - 📱 Responsive, modern UI with a clean design
 - 📊 Organized changelog view by month and year
+- 💡 Focus on actual code changes rather than just commit messages
 
 ## Technical Decisions
 
@@ -26,11 +27,12 @@ An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to 
 - **GitHub Integration**: Moved from local git to GitHub API for better accessibility
 - **Transaction-based Saves**: Ensures data consistency between changelogs and commits
 - **Optimistic UI**: Loading states and toast notifications for better UX
+- **Code-Centric Summaries**: Focuses on summarizing actual code changes rather than just commit messages for more accurate changelogs
 
 ### AI-Powered Development
 - **Cursor AI**: Used as the primary IDE with AI pair programming capabilities, significantly speeding up development and helping with code generation, debugging, and refactoring
-- **Grok**: Leveraged for understanding complex code patterns and architectural decisions, particularly helpful with Next.js App Router and Drizzle ORM integration
-- **GPT-4**: Powers the changelog generation, transforming technical commit messages into user-friendly changelog entries
+- **Grok**: Used for high-level ideation and architectural planning, helping to conceptualize the app's structure and core features before implementation
+- **GPT-4**: Powers the changelog generation, transforming technical code changes into user-friendly changelog entries
 
 ## Setup
 

@@ -25,18 +25,19 @@ export async function POST(request: Request) {
     const commitMessages = commits.map((c: Commit) => c.message).join("\n");
 
     const prompt = `
-      Create a concise changelog entry summarizing these commits.
+      Create a concise changelog entry summarizing the code changes represented by these commits.
+      Focus on the actual changes to the codebase (what was added, modified, or removed) rather than just the commit messages.
       Write a single, impactful sentence that captures the main user-facing changes.
-      Start with an action verb (Added, Updated, Released, Launched, etc.).
+      Start with an action verb (Added, Updated, Released, Launched, Fixed, etc.).
       Keep it brief and focused on user value.
       Do not use quotes in the response.
 
       Example outputs:
-      Added metadata field support to fine-tuning jobs.
-      Released GPT-4.5 with improved creative abilities and agentic planning.
-      Updated Admin API with key rotation and user invitation features.
+      Added metadata field support to the API with new validation rules.
+      Updated user authentication flow with improved security measures.
+      Fixed data synchronization issues between client and server.
 
-      Commits to summarize:
+      Commit messages (representing code changes):
       ${commitMessages}
     `;
 
