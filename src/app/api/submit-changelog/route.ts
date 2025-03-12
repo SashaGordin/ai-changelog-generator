@@ -1,13 +1,28 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/db";
-import { changelogs, processedCommits } from "@/app/db/schema";
-import { inArray } from "drizzle-orm";
+import { changelogs, processedCommits, fileChanges } from "@/app/db/schema";
 import type { ChangeType } from "../generate-changelog/route";
+
+interface FileChange {
+  path: string;
+  additions: number;
+  deletions: number;
+  patch: string;
+  component: string;
+}
+
+interface CommitStats {
+  totalAdditions: number;
+  totalDeletions: number;
+  filesChanged: number;
+}
 
 interface Commit {
   message: string;
   hash: string;
   date: string;
+  files: FileChange[];
+  stats: CommitStats;
 }
 
 const validChangeTypes = ["Feature", "Update", "Fix", "Breaking", "Security"] as const;
@@ -43,54 +58,51 @@ export async function POST(request: Request) {
 
     const title = new Date(date).toLocaleString('default', { month: 'long' }) + ", " + new Date(date).getFullYear();
 
-    try {
-      // Save changelog and processed commits in a transaction
-      const [newChangelog] = await db.transaction(async (tx) => {
-        // First, check which commits are already processed
-        const commitHashes = commits.map(c => c.hash);
-        const existingCommits = await tx
-          .select({ hash: processedCommits.hash })
-          .from(processedCommits)
-          .where(inArray(processedCommits.hash, commitHashes));
+    // Save changelog and processed commits in a transaction
+    const [newChangelog] = await db.transaction(async (tx) => {
+      const [changelog] = await tx
+        .insert(changelogs)
+        .values({ title, content, type })
+        .returning();
 
-        const existingHashes = new Set(existingCommits.map(c => c.hash));
-        const newCommits = commits.filter(commit => !existingHashes.has(commit.hash));
+      // Store all processed commits with their stats
+      await Promise.all(
+        commits.map(async (commit: Commit) => {
+          const [processedCommit] = await tx
+            .insert(processedCommits)
+            .values({
+              hash: commit.hash,
+              message: commit.message,
+              date: new Date(commit.date),
+              repoUrl: repoUrl,
+              changelogId: changelog.id,
+              stats: commit.stats,
+            })
+            .returning();
 
-        // If all commits are already processed, return an error
-        if (newCommits.length === 0) {
-          throw new Error("All commits have already been processed");
-        }
+          // Store file changes for this commit
+          await tx.insert(fileChanges).values(
+            commit.files.map(file => ({
+              commitId: processedCommit.id,
+              path: file.path,
+              additions: file.additions,
+              deletions: file.deletions,
+              patch: file.patch,
+              component: file.component,
+            }))
+          );
 
-        const [changelog] = await tx
-          .insert(changelogs)
-          .values({ title, content, type })
-          .returning();
+          return processedCommit;
+        })
+      );
 
-        // Store only new commits
-        await tx.insert(processedCommits).values(
-          newCommits.map((commit: Commit) => ({
-            hash: commit.hash,
-            message: commit.message,
-            date: new Date(commit.date),
-            repoUrl: repoUrl,
-            changelogId: changelog.id,
-          }))
-        );
+      return [changelog];
+    });
 
-        return [changelog];
-      });
-
-      return NextResponse.json({ changelog: newChangelog });
-    } catch (dbError) {
-      console.error("Database error:", dbError);
-      throw new Error(`Database operation failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
-    }
+    return NextResponse.json({ changelog: newChangelog });
   } catch (error) {
     console.error("Error submitting changelog:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Failed to submit changelog";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

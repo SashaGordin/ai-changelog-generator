@@ -5,10 +5,26 @@ import { toast } from "sonner";
 import { ChangeType } from "@/app/api/generate-changelog/route";
 import SwitchViewButton from "@/app/components/SwitchViewButton";
 
+interface FileChange {
+  path: string;
+  additions: number;
+  deletions: number;
+  patch: string;
+  component: string;
+}
+
+interface CommitStats {
+  totalAdditions: number;
+  totalDeletions: number;
+  filesChanged: number;
+}
+
 interface Commit {
   message: string;
   hash: string;
   date: string;
+  files: FileChange[];
+  stats: CommitStats;
 }
 
 interface ChangelogDraft {
@@ -178,9 +194,46 @@ export default function DevPage() {
             </div>
             <div className="border rounded-md shadow-sm bg-gray-50 p-4 max-h-60 overflow-y-auto">
               {commits.map((commit) => (
-                <div key={commit.hash} className="mb-3 last:mb-0">
-                  <div className="text-sm text-gray-600">{new Date(commit.date).toLocaleString()}</div>
-                  <div className="text-gray-800">{commit.message}</div>
+                <div key={commit.hash} className="mb-6 last:mb-0 border-b pb-4 last:border-b-0">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-sm text-gray-600">{new Date(commit.date).toLocaleString()}</div>
+                      <div className="text-gray-800 font-medium">{commit.message}</div>
+                    </div>
+                    <div className="text-xs text-gray-500 space-y-1">
+                      <div>Files Changed: {commit.stats.filesChanged}</div>
+                      <div className="text-green-600">+{commit.stats.totalAdditions}</div>
+                      <div className="text-red-600">-{commit.stats.totalDeletions}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 space-y-2">
+                    {Object.entries(
+                      commit.files.reduce((acc, file) => {
+                        if (!acc[file.component]) acc[file.component] = [];
+                        acc[file.component].push(file);
+                        return acc;
+                      }, {} as Record<string, FileChange[]>)
+                    ).map(([component, files]) => (
+                      <div key={component} className="text-sm">
+                        <div className="font-medium text-gray-700 mb-1">
+                          {component.charAt(0).toUpperCase() + component.slice(1)}
+                        </div>
+                        <div className="space-y-1 ml-4">
+                          {files.map((file) => (
+                            <div key={file.path} className="text-gray-600 flex items-center gap-2">
+                              <span className="truncate flex-1">{file.path}</span>
+                              <span className="text-xs whitespace-nowrap">
+                                <span className="text-green-600">+{file.additions}</span>
+                                {" / "}
+                                <span className="text-red-600">-{file.deletions}</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
