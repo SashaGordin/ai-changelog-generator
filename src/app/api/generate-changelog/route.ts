@@ -79,26 +79,29 @@ export async function POST(request: Request) {
       }));
 
       const prompt = `
-        Generate 1-3 concise changelog entries for changes in the ${component} component.
-        Focus on the actual code changes, considering:
+        Generate 1-2 high-level changelog entries for changes in the ${component} component.
+        Instead of describing specific file changes, focus on the overall impact to the application and its users.
+        Consider these technical changes:
         - Files modified: ${files.map(f => f.path).join(', ')}
         - Total changes: ${totalStats.additions} additions, ${totalStats.deletions} deletions
 
-        For context, here are some of the changes:
-        ${fileDetails.map(f => `${f.path}: ${f.changes}\nPatch preview: ${f.patch.slice(0, 200)}...`).join('\n\n')}
-
         Guidelines:
-        - Each entry should be a single, impactful sentence
-        - Start with an action verb (Added, Updated, Fixed, etc.)
-        - Focus on user-facing changes and technical improvements
-        - Be specific about what was changed
+        - Focus on business value and user impact
+        - Describe improvements to functionality, performance, or user experience
+        - Use clear, non-technical language
+        - Start with an action verb (Enhanced, Improved, Streamlined, etc.)
+        - Combine related technical changes into single, meaningful updates
+        - Don't mention specific files or technical implementations
         - Don't use quotes in the response
         - Separate entries with newlines
 
         Example outputs:
-        Added form validation to improve user input handling
-        Updated API response caching for better performance
-        Refactored database queries to reduce load times
+        Enhanced search performance with improved indexing and caching
+        Streamlined user onboarding process with simplified form validation
+        Improved dashboard loading speed and real-time updates
+
+        Technical changes to summarize:
+        ${fileDetails.map(f => `${f.path}: ${f.changes}`).join('\n')}
       `;
 
       const completion = await openai.chat.completions.create({
