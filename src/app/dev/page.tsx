@@ -27,9 +27,14 @@ interface Commit {
   stats: CommitStats;
 }
 
+interface ChangelogEntry {
+  component: string;
+  changes: string[];
+}
+
 interface ChangelogDraft {
   title: string;
-  content: string;
+  entries: ChangelogEntry[];
   date: string;
   type: ChangeType;
 }
@@ -40,12 +45,8 @@ export default function DevPage() {
   const [repoUrl, setRepoUrl] = useState("");
   const [commits, setCommits] = useState<Commit[]>([]);
   const [changelogDraft, setChangelogDraft] = useState<ChangelogDraft | null>(null);
-  const [editableChangelog, setEditableChangelog] = useState("");
   const [selectedType, setSelectedType] = useState<ChangeType>("Feature");
   const [error, setError] = useState<string | null>(null);
-  const [isPreview, setIsPreview] = useState(true);
-
-  // Separate loading states
   const [isFetchingCommits, setIsFetchingCommits] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,7 +93,6 @@ export default function DevPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate changelog");
       setChangelogDraft(data.changelog);
-      setEditableChangelog(data.changelog.content);
       toast.success("Changelog generated successfully!");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
@@ -108,12 +108,19 @@ export default function DevPage() {
 
     setIsSubmitting(true);
     setError(null);
+
     try {
+      const content = changelogDraft.entries
+        .map(entry => {
+          return `## ${entry.component}\n${entry.changes.map(change => `- ${change}`).join('\n')}`;
+        })
+        .join('\n\n');
+
       const res = await fetch("/api/submit-changelog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content: editableChangelog,
+          content,
           commits,
           repoUrl,
           type: selectedType,
@@ -125,7 +132,6 @@ export default function DevPage() {
 
       setCommits([]);
       setChangelogDraft(null);
-      setEditableChangelog("");
       toast.success("Changelog submitted successfully!");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
@@ -278,45 +284,44 @@ export default function DevPage() {
                   )}
                 </div>
               </div>
-              <div className="space-x-2">
-                <button
-                  onClick={() => setIsPreview(!isPreview)}
-                  className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                  disabled={isSubmitting}
-                >
-                  {isPreview ? "Edit" : "Preview"}
-                </button>
-                <button
-                  onClick={submitChangelog}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 min-w-[100px] relative"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span className="opacity-0">Submit</span>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      </div>
-                    </>
-                  ) : (
-                    "Submit"
-                  )}
-                </button>
-              </div>
+              <SwitchViewButton />
             </div>
 
-            {isPreview ? (
-              <div className="p-4 bg-gray-50 border rounded-md shadow-sm prose prose-sm max-w-none">
-                {editableChangelog}
-              </div>
-            ) : (
-              <textarea
-                value={editableChangelog}
-                onChange={(e) => setEditableChangelog(e.target.value)}
-                className="w-full h-32 p-4 border rounded-md shadow-sm font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <div className="prose max-w-none">
+              {changelogDraft.entries.map((entry, index) => (
+                <div key={index} className="mb-6">
+                  <h3 className="text-lg font-medium mb-2 text-gray-800">
+                    {entry.component.charAt(0).toUpperCase() + entry.component.slice(1)}
+                  </h3>
+                  <ul className="list-disc pl-5 space-y-2">
+                    {entry.changes.map((change, changeIndex) => (
+                      <li key={changeIndex} className="text-gray-700">
+                        {change}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={submitChangelog}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 relative"
                 disabled={isSubmitting}
-              />
-            )}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="opacity-0">Submit Changelog</span>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                    </div>
+                  </>
+                ) : (
+                  "Submit Changelog"
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
