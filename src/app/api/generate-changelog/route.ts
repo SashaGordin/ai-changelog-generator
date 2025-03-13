@@ -37,10 +37,14 @@ export async function POST(request: Request) {
       const allFiles = commits.flatMap(commit => commit.files || []);
       console.log(`Total files to analyze: ${allFiles.length}`);
 
+      // Extract commit messages for better context
+      const commitMessages = commits.map(commit => commit.message).filter(Boolean);
+      console.log(`Extracted ${commitMessages.length} commit messages`);
+
       const fileDetails = allFiles.map(file => ({
         path: file.path,
         changes: `${file.additions} additions, ${file.deletions} deletions`,
-        patch: file.patch || ''
+        patch: file.patch ? (file.patch.length > 500 ? file.patch.substring(0, 500) + '...' : file.patch) : ''
       }));
 
       // Analyze components from file paths
@@ -58,10 +62,25 @@ export async function POST(request: Request) {
         I need you to create a concise, user-friendly changelog entry based on these code changes.
 
         CONTEXT (Technical details for reference only - DO NOT mention these in the output):
-        ${fileDetails.map(f => `File: ${f.path}`).join('\n')}
+        COMMIT MESSAGES:
+        ${commitMessages.map((msg, i) => `${i+1}. ${msg}`).join('\n')}
+
+        MODIFIED FILES:
+        ${fileDetails.map(f => `File: ${f.path} (${f.changes})`).join('\n')}
+
+        CODE PATCHES (samples):
+        ${fileDetails.filter(f => f.patch).slice(0, 5).map(f => `--- ${f.path} ---\n${f.patch}`).join('\n\n')}
 
         YOUR TASK:
-        Create a simple changelog entry focused only on what users would care about.
+        Create a simple changelog entry that accurately describes ONLY the changes that were actually made in the commits above.
+        ACCURACY is more important than quantity - do NOT add features or changes that aren't specifically indicated in the commit data.
+        Focus ONLY on changes that impact how users interact with the application.
+
+        CRITICAL INSTRUCTIONS:
+        - It's better to mention fewer changes than to make up changes that weren't made
+        - DO NOT invent features like "improved search" unless the commits clearly show search improvements
+        - If the commits only show UI adjustments, then only mention UI adjustments
+        - If there are fewer than 3 meaningful changes, that's fine - quality over quantity
 
         REQUIRED FORMAT:
         1. **Bold Title**: A 3-5 word title that captures the essence of the change
@@ -69,14 +88,16 @@ export async function POST(request: Request) {
         2. One SHORT paragraph (2-3 sentences maximum) explaining what changed in simple,
            non-technical language. Focus on what users can now do or how their experience improved.
 
-        3. "What's the Impact?" section with 2-3 bullet points highlighting the specific benefits to users.
+        3. "What's the Impact?" section with 1-3 bullet points highlighting the specific benefits to users.
            Each bullet should be a single sentence, focused on outcomes, not implementation.
+           ONLY include benefits that directly relate to changes in the commits.
 
         IMPORTANT GUIDELINES:
         - Use everyday language anyone can understand
         - Focus 100% on user benefits and experience changes
         - NEVER mention technical implementation details (code, libraries, etc.)
         - Be extremely concise - most users only scan changelogs
+        - Only describe changes that are actually present in the commit data
 
         GOOD EXAMPLE:
         **Faster Search Results**
@@ -88,15 +109,17 @@ export async function POST(request: Request) {
         More accurate matches put what you need at the top of the list
         Historical content is now included in search results
 
-        BAD EXAMPLE (TOO TECHNICAL):
-        **Search Algorithm Update**
+        BAD EXAMPLE (INACCURATE):
+        **Complete UI Overhaul**
 
-        The search functionality was enhanced by implementing a new indexing algorithm. We replaced the previous search system with a more efficient solution that processes queries asynchronously.
+        We've redesigned the entire interface with a fresh look and feel. The application now includes dark mode, improved search, and a new dashboard.
 
         What's the Impact?
-        The algorithm now uses Levenshtein distance to compute string similarity
-        Search results are cached in Redis for 15 minutes
-        Query normalization improves match accuracy by 27%
+        The new interface is more modern and professional looking
+        Dark mode reduces eye strain when working at night
+        New dashboard gives you quick access to all features in one place
+
+        (This would be BAD if the commits only showed minor UI tweaks to one component)
         `;
 
       console.log("Calling OpenAI API");
@@ -135,13 +158,13 @@ export async function POST(request: Request) {
         console.log("Using fallback mock generation for testing");
 
         // Create a more simplified mock entry for testing
-        const mockEntry = `**Improved Changelog Display**
+        const mockEntry = `**UI Layout Improvements**
 
-We've updated the changelog system to provide clearer, more user-focused information about updates. The new format better highlights what matters to you and how changes affect your work.
+We've adjusted the layout of several UI elements to create a more logical flow. The repositioning of elements makes the application more intuitive to navigate.
 
 **What's the Impact?**
-Changes are summarized with a clear title and concise explanation
-Important impacts to your workflow are highlighted with bullet points`;
+Related UI elements are now grouped together for easier access
+The most important controls are more prominently displayed`;
 
         entries = [{
           content: mockEntry,
