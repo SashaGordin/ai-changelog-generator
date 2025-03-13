@@ -62,27 +62,37 @@ export async function POST(request: Request) {
         ${f.patch}`).join('\n\n')}
 
         Guidelines:
-        - Write natural, concise descriptions of user-facing improvements
-        - Focus on what the change means for users, not how it was implemented
-        - Keep entries brief - one simple sentence per improvement is ideal
-        - Avoid technical terms, code references, and implementation details
-        - Never use "first," "second," or numbered points
-        - Write in a consistent tense (preferably present)
-        - Each entry should stand alone and make sense by itself
-        - Start each entry with "- "
+        Create a comprehensive, user-friendly changelog entry in the following format:
 
-        Example outputs:
-        - Added real-time preview for a better editing experience
-        - Improved organization of changes by component
-        - Fixed loading issues for faster performance
-        - Simplified the changelog submission process
-        - Added visual indicators for file changes
+        1. **Title**: Start with a bold, concise title that summarizes the key change or feature (e.g., "Enhanced User Interface for Better Navigation")
 
-        Bad examples (avoid):
-        - Fixed bug in the FileChange interface implementation
-        - First, we improved error handling in the API
-        - Modified the database schema to support new features
-        - Enhanced the UI by refactoring the React components
+        2. **Summary Paragraph**: Provide a 2-3 sentence overview explaining what's changing, why it matters, and when it's happening.
+
+        3. **Impact Section**: Include a "What's the Impact?" section that clearly explains:
+           - What users will experience during the change
+           - What benefits they'll see after the change
+           - Any temporary disruptions or changes to workflow
+
+        4. **Next Steps**: If applicable, suggest what users should do to take advantage of the changes.
+
+        Important guidelines:
+        - Focus on user benefits rather than technical implementation
+        - Use clear, non-technical language
+        - Be specific about any changes to user workflow
+        - Mention timing of changes when relevant
+        - Include any limitations or caveats users should be aware of
+
+        Example format:
+        **[Title of Change]**
+
+        [Summary paragraph explaining the change, why it's happening, and when it takes effect]
+
+        **What's the Impact?**
+        - [Bullet point explaining specific benefit or change]
+        - [Bullet point explaining another impact]
+
+        **Next Steps**
+        - [Any action items for users]
         `;
 
       console.log("Calling OpenAI API");
@@ -93,62 +103,58 @@ export async function POST(request: Request) {
         const completion = await openai.chat.completions.create({
           model: "gpt-4",
           messages: [{ role: "user", content: prompt }],
-          max_tokens: 500,
+          max_tokens: 1000, // Increased token limit for more detailed response
           temperature: 0.7,
         });
         console.log("OpenAI API response received");
 
-        const rawChanges = completion.choices[0]?.message.content
-          ?.split('\n')
-          .filter(line => line.trim())
-          .map(line => line.replace(/['"]/g, '')) || [];
+        // The content will be a formatted changelog entry
+        const generatedContent = completion.choices[0]?.message.content?.trim() || "";
+        console.log("Generated changelog content");
 
-        console.log(`Generated ${rawChanges.length} change entries`);
+        // Create a single entry with the complete content
+        entries = [{
+          content: generatedContent,
+          order: 0,
+          component: detectComponent(generatedContent),
+          scope: detectScope(generatedContent),
+          impact: detectImpact(generatedContent),
+          isTechnical: false,
+          isUserFacing: true
+        }];
 
-        // Process changes into enhanced entries with metadata
-        entries = rawChanges.map((change, index) => {
-          const content = change.startsWith('- ') ? change : `- ${change}`;
-
-          // Attempt to infer metadata from content
-          return {
-            content,
-            order: index,
-            component: detectComponent(content),
-            scope: detectScope(content),
-            impact: detectImpact(content),
-            isTechnical: content.toLowerCase().includes('technical') ||
-                        content.toLowerCase().includes('performance'),
-            isUserFacing: !content.toLowerCase().includes('internal') &&
-                        !content.toLowerCase().includes('refactor')
-          };
-        });
-
-        changes = rawChanges.map(change =>
-          change.startsWith('- ') ? change : `- ${change}`
-        );
+        changes = [generatedContent];
       } catch (openaiError) {
         console.error("Error with OpenAI API:", openaiError);
 
         // Fallback for testing: generate mock entries without calling OpenAI
         console.log("Using fallback mock generation for testing");
 
-        // Create mock entries based on commit info
-        changes = [
-          "- Added support for detailed changelog entries with product-focused badges",
-          "- Improved filtering of changelog entries by feature and impact",
-          "- Enhanced visualization of changelog information",
-          "- Fixed email notification delivery for new changelog entries"
-        ];
+        // Create a more detailed mock entry in the Twilio format
+        const mockEntry = `**Enhanced Changelog Experience with Product Labels**
 
-        entries = changes.map((change, index) => ({
-          content: change,
-          order: index,
-          component: ["User Interface", "Filtering", "Data Visualization", "Email Notifications"][index] as string,
-          scope: ["User Experience", "Reporting", "Analytics"][index % 3] as string,
-          impact: ["minor", "major", "patch"][index % 3],
-          isTechnical: index % 2 === 0,
+Starting today, we're upgrading our changelog system to provide more detailed and relevant information about product updates. This change will make it easier to understand what areas of the platform are being improved and how these changes might affect your workflow.
+
+**What's the Impact?**
+- Product-focused labels now clearly indicate which features are being updated
+- Improved organization of changelog entries makes it easier to find relevant updates
+- Enhanced description format provides more context about changes and their benefits
+
+**Next Steps**
+- No action required - the new format is automatically applied to all changelog entries
+- Visit the changelog page to see the new format in action`;
+
+        entries = [{
+          content: mockEntry,
+          order: 0,
+          component: "User Experience",
+          scope: "Frontend",
+          impact: "minor",
+          isTechnical: false,
           isUserFacing: true
-        }));
+        }];
+
+        changes = [mockEntry];
       }
 
       const date = new Date();

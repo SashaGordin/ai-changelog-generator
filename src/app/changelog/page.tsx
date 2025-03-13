@@ -27,6 +27,61 @@ const typeColors: Record<ChangeType, { bg: string; text: string }> = {
   Security: { bg: "bg-purple-100", text: "text-purple-800" },
 };
 
+// Helper to convert simple markdown-style formatting to HTML
+function formatContent(content: string): React.ReactNode {
+  if (!content) return null;
+
+  // Split content by line breaks
+  const lines = content.split('\n');
+
+  return lines.map((line, index) => {
+    // Handle bold text (wrapped in **)
+    const boldPattern = /\*\*(.+?)\*\*/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = boldPattern.exec(line)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(line.substring(lastIndex, match.index));
+      }
+
+      // Add the bold text
+      parts.push(<strong key={`bold-${index}-${match.index}`}>{match[1]}</strong>);
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add any remaining text
+    if (lastIndex < line.length) {
+      parts.push(line.substring(lastIndex));
+    }
+
+    // If line is empty, add a spacer
+    if (line.trim() === '') {
+      return <div key={`line-${index}`} className="h-4"></div>;
+    }
+
+    // If line starts with a dash, make it a bullet point
+    if (line.trim().startsWith('-')) {
+      return (
+        <div key={`line-${index}`} className="flex items-start mb-2">
+          <span className="mr-2">•</span>
+          <div>{parts.length > 0 ? parts : line.substring(1).trim()}</div>
+        </div>
+      );
+    }
+
+    // Return a regular paragraph with the processed text
+    return (
+      <div key={`line-${index}`} className={`mb-2 ${line.includes('**') && !line.trim().startsWith('**') ? 'mt-4' : ''}`}>
+        {parts.length > 0 ? parts : line}
+      </div>
+    );
+  });
+}
+
 export default async function ChangelogPage() {
   // Get all changelogs
   const logs = await db.select().from(changelogs).orderBy(desc(changelogs.createdAt));
@@ -137,8 +192,8 @@ export default async function ChangelogPage() {
                       {log.entries ? (
                         <div className="space-y-2">
                           {log.entries.map((entry) => (
-                            <div key={entry.id} className="text-gray-800">
-                              {entry.content}
+                            <div key={entry.id} className="text-gray-800 prose prose-sm max-w-none">
+                              {formatContent(entry.content)}
                             </div>
                           ))}
                         </div>

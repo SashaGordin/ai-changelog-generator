@@ -395,31 +395,29 @@ export default function DevPage() {
 
             <div className="prose max-w-none">
               {changelogDraft.changes.map((change, index) => {
-                const isIntroLine = !change.startsWith('- ') &&
-                  (change.includes('breakdown') || change.includes('following') || change.includes('changes made'));
-
                 return (
-                  <div key={index} className={`${isIntroLine ? 'mb-4' : 'p-3 border rounded-md mb-4 bg-gray-50'} group`}>
-                    <div
-                      contentEditable={isEditing}
-                      suppressContentEditableWarning
-                      className={`text-gray-700 ${isEditing ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 py-1 border border-gray-200 bg-white' : ''}`}
-                      onBlur={(e) => {
-                        if (!isEditing) return;
-                        const newChanges = [...changelogDraft.changes];
-                        let newText = e.target.textContent || '';
-                        if (!isIntroLine && !newText.startsWith('- ')) {
-                          newText = `- ${newText}`;
-                        }
-                        newChanges[index] = newText;
-                        setChangelogDraft({
-                          ...changelogDraft,
-                          changes: newChanges
-                        });
-                      }}
-                    >
-                      {isIntroLine ? change : (change.startsWith('- ') ? change : `- ${change}`)}
-                    </div>
+                  <div key={index} className="p-3 border rounded-md mb-4 bg-gray-50 group">
+                    {isEditing ? (
+                      <div
+                        contentEditable={true}
+                        suppressContentEditableWarning
+                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 py-1 border border-gray-200 bg-white"
+                        onBlur={(e) => {
+                          const newChanges = [...changelogDraft.changes];
+                          newChanges[index] = e.target.textContent || '';
+                          setChangelogDraft({
+                            ...changelogDraft,
+                            changes: newChanges
+                          });
+                        }}
+                      >
+                        {change}
+                      </div>
+                    ) : (
+                      <div className="text-gray-700">
+                        {formatContent(change)}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -512,4 +510,59 @@ function detectImpact(content: string): string {
     return 'patch';
 
   return 'minor'; // Default
+}
+
+// Helper to convert simple markdown-style formatting to HTML
+function formatContent(content: string): React.ReactNode {
+  if (!content) return null;
+
+  // Split content by line breaks
+  const lines = content.split('\n');
+
+  return lines.map((line, index) => {
+    // Handle bold text (wrapped in **)
+    const boldPattern = /\*\*(.+?)\*\*/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = boldPattern.exec(line)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(line.substring(lastIndex, match.index));
+      }
+
+      // Add the bold text
+      parts.push(<strong key={`bold-${index}-${match.index}`}>{match[1]}</strong>);
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add any remaining text
+    if (lastIndex < line.length) {
+      parts.push(line.substring(lastIndex));
+    }
+
+    // If line is empty, add a spacer
+    if (line.trim() === '') {
+      return <div key={`line-${index}`} className="h-4"></div>;
+    }
+
+    // If line starts with a dash, make it a bullet point
+    if (line.trim().startsWith('-')) {
+      return (
+        <div key={`line-${index}`} className="flex items-start mb-2">
+          <span className="mr-2">•</span>
+          <div>{parts.length > 0 ? parts : line.substring(1).trim()}</div>
+        </div>
+      );
+    }
+
+    // Return a regular paragraph with the processed text
+    return (
+      <div key={`line-${index}`} className={`mb-2 ${line.includes('**') && !line.trim().startsWith('**') ? 'mt-4' : ''}`}>
+        {parts.length > 0 ? parts : line}
+      </div>
+    );
+  });
 }
