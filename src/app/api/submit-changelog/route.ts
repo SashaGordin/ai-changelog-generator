@@ -81,16 +81,18 @@ export async function POST(request: Request) {
             .returning();
 
           // Store file changes for this commit
-          await tx.insert(fileChanges).values(
-            commit.files.map(file => ({
-              commitId: processedCommit.id,
-              path: file.path,
-              additions: file.additions,
-              deletions: file.deletions,
-              patch: file.patch,
-              component: file.component,
-            }))
-          );
+          if (commit.files && commit.files.length > 0) {
+            await tx.insert(fileChanges).values(
+              commit.files.map(file => ({
+                commitId: processedCommit.id,
+                path: file.path,
+                additions: file.additions,
+                deletions: file.deletions,
+                patch: file.patch,
+                component: file.component,
+              }))
+            );
+          }
 
           return processedCommit;
         })

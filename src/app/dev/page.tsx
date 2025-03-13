@@ -27,16 +27,11 @@ interface Commit {
   stats: CommitStats;
 }
 
-interface ChangelogEntry {
-  component: string;
-  changes: string[];
-}
-
 interface ChangelogDraft {
   title: string;
-  entries: ChangelogEntry[];
   date: string;
   type: ChangeType;
+  changes: string[];
 }
 
 const changeTypes: ChangeType[] = ["Feature", "Update", "Fix", "Breaking", "Security"];
@@ -50,6 +45,7 @@ export default function DevPage() {
   const [isFetchingCommits, setIsFetchingCommits] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const fetchCommits = async () => {
     setIsFetchingCommits(true);
@@ -104,27 +100,54 @@ export default function DevPage() {
   };
 
   const submitChangelog = async () => {
-    if (!changelogDraft) return;
+    if (!changelogDraft || !changelogDraft.changes.length) {
+      toast.error("Cannot submit empty changelog");
+      return;
+    }
+
+    if (!commits || commits.length === 0) {
+      toast.error("No commits available to submit");
+      return;
+    }
+
+    if (!repoUrl) {
+      toast.error("Repository URL is required");
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const content = changelogDraft.entries
-        .map(entry => {
-          return `## ${entry.component}\n${entry.changes.map(change => `- ${change}`).join('\n')}`;
-        })
-        .join('\n\n');
+      // Filter out any empty changes
+      const validChanges = changelogDraft.changes.filter(change => change.trim() !== '');
+
+      if (validChanges.length === 0) {
+        toast.error("Changelog must contain at least one valid entry");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const content = validChanges.join('\n');
+
+      // Ensure all commits have the required fields
+      const validCommits = commits.map(commit => ({
+        hash: commit.hash,
+        message: commit.message || "No message provided",
+        date: commit.date,
+        files: Array.isArray(commit.files) ? commit.files : [],
+        stats: commit.stats || { totalAdditions: 0, totalDeletions: 0, filesChanged: 0 }
+      }));
 
       const res = await fetch("/api/submit-changelog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content,
-          commits,
+          commits: validCommits,
           repoUrl,
-          type: selectedType,
-          date: changelogDraft.date,
+          type: selectedType || "Feature",
+          date: changelogDraft.date || new Date().toISOString(),
         }),
       });
       const data = await res.json();
@@ -288,23 +311,51 @@ export default function DevPage() {
             </div>
 
             <div className="prose max-w-none">
-              {changelogDraft.entries.map((entry, index) => (
-                <div key={index} className="mb-6">
-                  <h3 className="text-lg font-medium mb-2 text-gray-800">
-                    {entry.component.charAt(0).toUpperCase() + entry.component.slice(1)}
-                  </h3>
-                  <ul className="list-disc pl-5 space-y-2">
-                    {entry.changes.map((change, changeIndex) => (
-                      <li key={changeIndex} className="text-gray-700">
-                        {change}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {changelogDraft.changes.map((change, index) => {
+                const isIntroLine = !change.startsWith('- ') &&
+                  (change.includes('breakdown') || change.includes('following') || change.includes('changes made'));
+
+                return (
+                  <div key={index} className={`${isIntroLine ? 'mb-4' : 'ml-5 list-disc'} group`}>
+                    <div
+                      contentEditable={isEditing}
+                      suppressContentEditableWarning
+                      className={`text-gray-700 ${isEditing ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 -mx-1 border-dashed border border-transparent hover:border-gray-300' : ''}`}
+                      onBlur={(e) => {
+                        if (!isEditing) return;
+                        const newChanges = [...changelogDraft.changes];
+                        let newText = e.target.textContent || '';
+                        if (!isIntroLine && !newText.startsWith('- ')) {
+                          newText = `- ${newText}`;
+                        }
+                        newChanges[index] = newText;
+                        setChangelogDraft({
+                          ...changelogDraft,
+                          changes: newChanges
+                        });
+                      }}
+                    >
+                      {isIntroLine ? change : (change.startsWith('- ') ? change : `- ${change}`)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="mt-6 flex justify-end space-x-3 pb-8">
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className={`px-4 py-2 text-white rounded-md flex items-center gap-2 ${
+                  isEditing
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-gray-600 hover:bg-gray-700'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                {isEditing ? "Done Editing" : "Edit"}
+              </button>
               <button
                 onClick={submitChangelog}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 relative"

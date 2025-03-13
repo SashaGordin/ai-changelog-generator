@@ -56,7 +56,11 @@ export default async function ChangelogPage() {
                         )}
                       </div>
                       <div className="text-gray-800">
-                        {log.content}
+                        {log.content.split('\n').map((line, i) => (
+                          <div key={i} className="mb-2">
+                            {line}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
