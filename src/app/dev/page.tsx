@@ -45,6 +45,24 @@ interface ChangelogDraft {
 
 const changeTypes: ChangeType[] = ["Feature", "Update", "Fix", "Breaking", "Security"];
 
+// Define available feature badges for the platform
+const availableFeatureBadges = [
+  "Analytics",
+  "Authentication",
+  "API Integration",
+  "Content Management",
+  "Dashboards",
+  "Data Visualization",
+  "Email Notifications",
+  "Filtering",
+  "Performance Optimization",
+  "Reporting",
+  "Search",
+  "Security Features",
+  "User Experience",
+  "User Interface"
+];
+
 export default function DevPage() {
   const [repoUrl, setRepoUrl] = useState("");
   const [commits, setCommits] = useState<Commit[]>([]);
@@ -55,6 +73,7 @@ export default function DevPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedBadges, setSelectedBadges] = useState<Record<number, string[]>>({});
 
   const fetchCommits = async () => {
     setIsFetchingCommits(true);
@@ -108,6 +127,20 @@ export default function DevPage() {
     }
   };
 
+  const toggleBadgeForEntry = (entryIndex: number, badge: string) => {
+    setSelectedBadges(prev => {
+      const current = prev[entryIndex] || [];
+      const updated = current.includes(badge)
+        ? current.filter(b => b !== badge)
+        : [...current, badge];
+
+      return {
+        ...prev,
+        [entryIndex]: updated
+      };
+    });
+  };
+
   const submitChangelog = async () => {
     if (!changelogDraft || !changelogDraft.changes.length) {
       toast.error("Cannot submit empty changelog");
@@ -138,9 +171,16 @@ export default function DevPage() {
       }
 
       // Use enhanced entries if available, otherwise generate simple entries from changes
-      const entries = changelogDraft.entries || validChanges.map((change, index) => ({
+      const entries = validChanges.map((change, index) => ({
         content: change,
-        order: index
+        order: index,
+        // Apply any selected badges as components
+        component: selectedBadges[index]?.[0] || undefined,
+        // If multiple badges, use the second as scope
+        scope: selectedBadges[index]?.[1] || undefined,
+        impact: detectImpact(change),
+        isTechnical: false,
+        isUserFacing: true
       }));
 
       // Keep content field for backward compatibility
@@ -354,6 +394,32 @@ export default function DevPage() {
                     >
                       {isIntroLine ? change : (change.startsWith('- ') ? change : `- ${change}`)}
                     </div>
+
+                    {isEditing && !isIntroLine && (
+                      <div className="ml-2 mt-1 mb-3">
+                        <div className="text-xs text-gray-500 mb-1">Feature badges:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {availableFeatureBadges.map(badge => (
+                            <button
+                              key={badge}
+                              onClick={() => toggleBadgeForEntry(index, badge)}
+                              className={`text-xs px-2 py-0.5 rounded-full ${
+                                selectedBadges[index]?.includes(badge)
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {badge}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          {selectedBadges[index]?.length
+                            ? `Selected: ${selectedBadges[index].join(', ')}`
+                            : 'No badges selected'}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -395,4 +461,18 @@ export default function DevPage() {
       </div>
     </>
   );
+}
+
+// Helper function to guess impact level
+function detectImpact(content: string): string {
+  const lowerContent = content.toLowerCase();
+
+  if (lowerContent.includes('major') || lowerContent.includes('significant') ||
+      lowerContent.includes('redesign') || lowerContent.includes('overhaul'))
+    return 'major';
+  if (lowerContent.includes('bugfix') || lowerContent.includes('typo') ||
+      lowerContent.includes('minor fix') || lowerContent.includes('small'))
+    return 'patch';
+
+  return 'minor'; // Default
 }

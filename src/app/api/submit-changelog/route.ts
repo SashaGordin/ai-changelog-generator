@@ -192,16 +192,35 @@ export async function POST(request: Request) {
 function detectComponent(content: string): string | undefined {
   const lowerContent = content.toLowerCase();
 
-  if (lowerContent.includes('ui') || lowerContent.includes('interface') || lowerContent.includes('display'))
-    return 'UI';
-  if (lowerContent.includes('api') || lowerContent.includes('endpoint'))
-    return 'API';
-  if (lowerContent.includes('database') || lowerContent.includes('schema') || lowerContent.includes('storage'))
-    return 'Database';
-  if (lowerContent.includes('security') || lowerContent.includes('auth'))
-    return 'Security';
+  // Product features
+  if (lowerContent.includes('analytics') || lowerContent.includes('stats') || lowerContent.includes('metrics'))
+    return 'Analytics';
+  if (lowerContent.includes('auth') || lowerContent.includes('login') || lowerContent.includes('sign in'))
+    return 'Authentication';
+  if (lowerContent.includes('api') || lowerContent.includes('integration') || lowerContent.includes('connect'))
+    return 'API Integration';
+  if (lowerContent.includes('content') || lowerContent.includes('editor') || lowerContent.includes('cms'))
+    return 'Content Management';
+  if (lowerContent.includes('dashboard'))
+    return 'Dashboards';
+  if (lowerContent.includes('visualiz') || lowerContent.includes('chart') || lowerContent.includes('graph'))
+    return 'Data Visualization';
+  if (lowerContent.includes('email') || lowerContent.includes('notification') || lowerContent.includes('alert'))
+    return 'Email Notifications';
+  if (lowerContent.includes('filter') || lowerContent.includes('sort') || lowerContent.includes('search'))
+    return 'Filtering';
   if (lowerContent.includes('performance') || lowerContent.includes('speed') || lowerContent.includes('optimize'))
-    return 'Performance';
+    return 'Performance Optimization';
+  if (lowerContent.includes('report') || lowerContent.includes('export'))
+    return 'Reporting';
+  if (lowerContent.includes('search'))
+    return 'Search';
+  if (lowerContent.includes('security') || lowerContent.includes('protect') || lowerContent.includes('privacy'))
+    return 'Security Features';
+  if (lowerContent.includes('user experience') || lowerContent.includes('ux') || lowerContent.includes('workflow'))
+    return 'User Experience';
+  if (lowerContent.includes('ui') || lowerContent.includes('interface') || lowerContent.includes('display'))
+    return 'User Interface';
 
   return undefined;
 }

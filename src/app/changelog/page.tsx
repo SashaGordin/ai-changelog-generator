@@ -20,13 +20,27 @@ const impactColors = {
   patch: { bg: "bg-gray-100", text: "text-gray-800" },
 };
 
-// Component colors
+// Component colors - more product-focused
 const componentColors: Record<string, { bg: string; text: string }> = {
-  UI: { bg: "bg-indigo-100", text: "text-indigo-800" },
-  API: { bg: "bg-emerald-100", text: "text-emerald-800" },
-  Database: { bg: "bg-amber-100", text: "text-amber-800" },
-  Security: { bg: "bg-red-100", text: "text-red-800" },
-  Performance: { bg: "bg-cyan-100", text: "text-cyan-800" },
+  // Core platform features
+  "Analytics": { bg: "bg-purple-100", text: "text-purple-800" },
+  "Authentication": { bg: "bg-red-100", text: "text-red-800" },
+  "API Integration": { bg: "bg-emerald-100", text: "text-emerald-800" },
+  "Content Management": { bg: "bg-amber-100", text: "text-amber-800" },
+  "Dashboards": { bg: "bg-indigo-100", text: "text-indigo-800" },
+  "Data Visualization": { bg: "bg-cyan-100", text: "text-cyan-800" },
+  "Email Notifications": { bg: "bg-blue-100", text: "text-blue-800" },
+  "Filtering": { bg: "bg-teal-100", text: "text-teal-800" },
+  "Performance Optimization": { bg: "bg-orange-100", text: "text-orange-800" },
+  "Reporting": { bg: "bg-violet-100", text: "text-violet-800" },
+  "Search": { bg: "bg-lime-100", text: "text-lime-800" },
+  "Security Features": { bg: "bg-red-100", text: "text-red-800" },
+  "User Experience": { bg: "bg-pink-100", text: "text-pink-800" },
+  "User Interface": { bg: "bg-indigo-100", text: "text-indigo-800" },
+  // Legacy technical components (for backward compatibility)
+  "UI": { bg: "bg-indigo-100", text: "text-indigo-800" },
+  "API": { bg: "bg-emerald-100", text: "text-emerald-800" },
+  "Database": { bg: "bg-amber-100", text: "text-amber-800" },
 };
 
 export default async function ChangelogPage({
@@ -34,11 +48,12 @@ export default async function ChangelogPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  // Get filter parameters
-  const componentFilter = searchParams.component as string | undefined;
-  const impactFilter = searchParams.impact as string | undefined;
-  const scopeFilter = searchParams.scope as string | undefined;
-  const userFacingOnly = searchParams.userFacing === 'true';
+  // Get filter parameters - ensure searchParams is properly resolved
+  const params = await searchParams;
+  const componentFilter = params.component as string | undefined;
+  const impactFilter = params.impact as string | undefined;
+  const scopeFilter = params.scope as string | undefined;
+  const userFacingOnly = params.userFacing === 'true';
 
   // Get all changelogs
   const logs = await db.select().from(changelogs).orderBy(desc(changelogs.createdAt));
@@ -197,6 +212,16 @@ export default async function ChangelogPage({
                                     componentColors[entry.component as keyof typeof componentColors]?.text || 'text-gray-700'
                                   }`}>
                                     {entry.component}
+                                  </span>
+                                )}
+
+                                {entry.scope && entry.scope !== entry.component && (
+                                  <span className={`px-1.5 py-0.5 text-xs rounded ${
+                                    componentColors[entry.scope as keyof typeof componentColors]?.bg || 'bg-gray-100'
+                                  } ${
+                                    componentColors[entry.scope as keyof typeof componentColors]?.text || 'text-gray-700'
+                                  }`}>
+                                    {entry.scope}
                                   </span>
                                 )}
 
