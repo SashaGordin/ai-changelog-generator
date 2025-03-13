@@ -1,9 +1,8 @@
 import { db } from "@/app/db";
 import { changelogs, changelogEntries } from "@/app/db/schema";
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { ChangeType } from "../api/generate-changelog/route";
 import SwitchViewButton from "@/app/components/SwitchViewButton";
-import Link from "next/link";
 
 // Define an interface for changelog entries including the labels field
 interface ChangelogEntry {
@@ -28,68 +27,18 @@ const typeColors: Record<ChangeType, { bg: string; text: string }> = {
   Security: { bg: "bg-purple-100", text: "text-purple-800" },
 };
 
-export default async function ChangelogPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  // Get filter parameters - ensure searchParams is properly resolved
-  const params = await searchParams;
-  const componentFilter = params.component as string | undefined;
-  const userFacingOnly = params.userFacing === 'true';
-
+export default async function ChangelogPage() {
   // Get all changelogs
   const logs = await db.select().from(changelogs).orderBy(desc(changelogs.createdAt));
 
   // Fetch entries for each changelog
   const logsWithEntries = await Promise.all(
     logs.map(async (log) => {
-      // Create an array of conditions
-      const conditions = [eq(changelogEntries.changelogId, log.id)];
-
-      // Add optional conditions for filtering
-      if (componentFilter && componentFilter.length > 0) {
-        // We need to expand the query to check both component field and labels field
-        const entries = await db
-          .select()
-          .from(changelogEntries)
-          .where(eq(changelogEntries.changelogId, log.id))
-          .orderBy(changelogEntries.order);
-
-        // Filter entries that have the component either in component field or in labels
-        const filteredEntries = entries.filter(entry => {
-          // Check direct component match
-          if (entry.component === componentFilter) return true;
-
-          // Check if component is in the labels JSON
-          if (entry.labels) {
-            try {
-              const labels = JSON.parse(entry.labels as string) as string[];
-              return labels.includes(componentFilter);
-            } catch {
-              return false;
-            }
-          }
-
-          return false;
-        });
-
-        return {
-          ...log,
-          entries: filteredEntries.length > 0 ? filteredEntries : null
-        };
-      }
-
-      // If no component filter or it's not in labels, apply standard filtering
-      if (userFacingOnly) {
-        conditions.push(eq(changelogEntries.isUserFacing, true));
-      }
-
-      // Execute query with all conditions if no special filtering was applied
+      // Get all entries for this changelog
       const entries = await db
         .select()
         .from(changelogEntries)
-        .where(and(...conditions))
+        .where(eq(changelogEntries.changelogId, log.id))
         .orderBy(changelogEntries.order);
 
       return {
@@ -99,10 +48,8 @@ export default async function ChangelogPage({
     })
   );
 
-  // Remove changelogs that have no matching entries after filtering
-  const filteredLogs = logsWithEntries.filter(log =>
-    log.entries === null || log.entries.length > 0
-  );
+  // Keep all changelogs
+  const filteredLogs = logsWithEntries;
 
   // Group logs by month and year
   const groupedLogs = filteredLogs.reduce((acc, log) => {
@@ -112,32 +59,6 @@ export default async function ChangelogPage({
     acc[key].push(log);
     return acc;
   }, {} as Record<string, typeof filteredLogs>);
-
-  // Get unique components and labels for filter options
-  const allEntries = await db.select().from(changelogEntries);
-
-  // Extract all unique badges from both component and labels fields
-  const allLabels = allEntries.flatMap(entry => {
-    const badges = [];
-
-    // Add component if it exists
-    if (entry.component) badges.push(entry.component);
-
-    // Add all labels from the labels JSON field
-    if (entry.labels) {
-      try {
-        const parsedLabels = JSON.parse(entry.labels as string) as string[];
-        badges.push(...parsedLabels);
-      } catch {
-        // Ignore parsing errors
-      }
-    }
-
-    return badges;
-  });
-
-  // Get unique components for filter options
-  const components = [...new Set(allLabels.filter(Boolean))];
 
   // Helper to extract all badges from entries
   function getBadgesFromEntries(entries: ChangelogEntry[] | null): string[] {
@@ -171,37 +92,6 @@ export default async function ChangelogPage({
       <div className="max-w-4xl mx-auto px-6 pt-24">
         <div className="flex justify-between items-center mb-12">
           <h1 className="text-4xl font-bold">Changelog</h1>
-
-          <div className="flex gap-4">
-            {/* Filter controls */}
-            <div className="space-y-2">
-              <div className="flex gap-2 justify-end">
-                {components.map(component => (
-                  component && (
-                    <Link
-                      key={component}
-                      href={`/changelog?component=${component}`}
-                      className={`text-xs px-2.5 py-1 rounded-full ${
-                        componentFilter === component
-                          ? 'bg-gray-200 text-gray-800'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {component}
-                    </Link>
-                  )
-                ))}
-                {componentFilter && (
-                  <Link
-                    href="/changelog"
-                    className="text-xs px-2.5 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200"
-                  >
-                    Clear
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
 
         {Object.entries(groupedLogs).map(([title, monthLogs]) => (
