@@ -8,10 +8,11 @@ An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to 
 - 🔄 Direct GitHub repository integration
 - 🎯 Smart commit deduplication to prevent duplicate entries
 - 📝 Editable changelog entries before submission
-- 🏷️ Categorization of changes (Feature, Update, Fix, Breaking, Security)
-- 📱 Responsive, modern UI with a clean design
+- 🏷️ Feature badges for better categorization
+- 🎨 Clean, modern UI with improved formatting
 - 📊 Organized changelog view by month and year
 - 💡 Focus on actual code changes rather than just commit messages
+- 🎯 Accurate change detection based on code diffs
 
 ## Technical Decisions
 
@@ -27,7 +28,9 @@ An intelligent changelog generator that uses GitHub's API and OpenAI's GPT-4 to 
 - **GitHub Integration**: Moved from local git to GitHub API for better accessibility
 - **Transaction-based Saves**: Ensures data consistency between changelogs and commits
 - **Optimistic UI**: Loading states and toast notifications for better UX
-- **Code-Centric Summaries**: Focuses on summarizing actual code changes rather than just commit messages for more accurate changelogs
+- **Code-Centric Analysis**: Enhanced prompt system that analyzes actual code diffs for accurate change detection
+- **Feature Badges**: Replaced component detection with user-selected feature badges for better categorization
+- **Simplified Data Model**: Streamlined database schema by removing unused fields and focusing on essential data
 
 ### AI-Powered Development
 - **Cursor AI**: Used as the primary IDE with AI pair programming capabilities, significantly speeding up development and helping with code generation, debugging, and refactoring
@@ -70,16 +73,26 @@ pnpm dev
 2. Enter a GitHub repository URL
 3. Click "Fetch New Commits" to get recent commits
 4. Select the change type (Feature, Update, etc.)
-5. Click "Generate Changelog" to create an AI-generated entry
-6. Edit the entry if needed
-7. Click "Submit" to save the changelog
-8. View the formatted changelog in the public view
+5. Add relevant feature badges to categorize the changes
+6. Click "Generate Changelog" to create an AI-generated entry
+7. Edit the entry if needed
+8. Click "Submit" to save the changelog
+9. View the formatted changelog in the public view
 
 ## Environment Variables
 
 - `DATABASE_URL`: PostgreSQL connection string
 - `OPENAI_API_KEY`: OpenAI API key for GPT-4 access
 - `GITHUB_TOKEN`: GitHub Personal Access Token with repo access
+
+## Recent Updates
+
+- 🎯 Improved accuracy of changelog entries by enhancing the AI prompt to focus on actual code changes
+- 🏷️ Replaced automatic component detection with user-selected feature badges for better categorization
+- 🎨 Enhanced bullet point formatting for better readability
+- 📝 Simplified data model by removing unused fields (component, scope, impact)
+- 🔄 Fixed hydration issues with consistent date formatting
+- ⚡️ Optimized code by removing unused functions and streamlining the codebase
 
 ## Demo
 

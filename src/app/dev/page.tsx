@@ -35,11 +35,9 @@ interface ChangelogDraft {
   entries?: {
     content: string;
     component?: string;
-    scope?: string;
     impact?: string;
-    isTechnical?: boolean;
-    isUserFacing?: boolean;
     order?: number;
+    labels?: string;
   }[];
 }
 
@@ -301,13 +299,9 @@ export default function DevPage() {
         return {
           content: change,
           order: index,
-          // Store all badges together as a JSON string in one field
           labels: selectedBadges.length > 0 ? JSON.stringify(selectedBadges) : null,
-          // Keep component for backward compatibility with existing filters
           component: selectedBadges.length > 0 ? selectedBadges[0] : detectComponent(change),
-          impact: detectImpact(change),
-          isTechnical: false,
-          isUserFacing: true
+          impact: detectImpact(change)
         };
       });
 
