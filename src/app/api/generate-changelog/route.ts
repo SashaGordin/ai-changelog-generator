@@ -61,55 +61,67 @@ export async function POST(request: Request) {
       const prompt = `
         I need you to create a concise, user-friendly changelog entry based on these code changes.
 
-        CONTEXT (Technical details for reference only - DO NOT mention these in the output):
+        CONTEXT (Technical details for reference - analyze these carefully):
         COMMIT MESSAGES:
         ${commitMessages.map((msg, i) => `${i+1}. ${msg}`).join('\n')}
 
-        MODIFIED FILES:
-        ${fileDetails.map(f => `File: ${f.path} (${f.changes})`).join('\n')}
+        CODE CHANGES ANALYSIS:
+        ${fileDetails.map(f => {
+          const patchLines = f.patch ? f.patch.split('\n').filter((line: string) => line.startsWith('+') || line.startsWith('-')) : [];
+          return `
+          File: ${f.path}
+          Changes: ${f.changes}
+          Key modifications:
+          ${patchLines.map((line: string) => `  ${line}`).join('\n')}
+          `;
+        }).join('\n\n')}
 
-        CODE PATCHES (samples):
-        ${fileDetails.filter(f => f.patch).slice(0, 5).map(f => `--- ${f.path} ---\n${f.patch}`).join('\n\n')}
+        COMPONENTS MODIFIED:
+        ${Array.from(components).join(', ')}
 
         YOUR TASK:
-        Create a simple changelog entry that accurately describes ONLY the changes that were actually made in the commits above.
-        ACCURACY is more important than quantity - do NOT add features or changes that aren't specifically indicated in the commit data.
-        Focus ONLY on changes that impact how users interact with the application.
+        Create a simple changelog entry that accurately describes ONLY the changes that were actually made in the code above.
+        You MUST analyze the actual code changes (additions/deletions) to understand what was modified.
 
         CRITICAL INSTRUCTIONS:
+        - Focus on the actual code changes in the patches above, not just the commit messages
+        - Look for patterns in the modified files to understand the scope of changes
+        - If you see test files changed, look for the corresponding implementation files
+        - Pay attention to the actual lines added/removed to understand the true impact
         - It's better to mention fewer changes than to make up changes that weren't made
-        - DO NOT invent features like "improved search" unless the commits clearly show search improvements
-        - If the commits only show UI adjustments, then only mention UI adjustments
+        - DO NOT invent features that aren't shown in the actual code changes
+        - If the diffs only show UI adjustments, then only mention UI adjustments
         - If there are fewer than 3 meaningful changes, that's fine - quality over quantity
 
         REQUIRED FORMAT:
-        1. **Bold Title**: A 3-5 word title that captures the essence of the change
+        1. **Bold Title**: A 3-5 word title that captures the essence of the actual code changes
 
         2. One SHORT paragraph (2-3 sentences maximum) explaining what changed in simple,
            non-technical language. Focus on what users can now do or how their experience improved.
+           This must be based on the actual code modifications shown above.
 
         3. "What's the Impact?" section with 1-3 bullet points highlighting the specific benefits to users.
            Each bullet should be a single sentence, focused on outcomes, not implementation.
-           ONLY include benefits that directly relate to changes in the commits.
+           ONLY include benefits that directly relate to changes shown in the code diffs.
 
         IMPORTANT GUIDELINES:
         - Use everyday language anyone can understand
         - Focus 100% on user benefits and experience changes
         - NEVER mention technical implementation details (code, libraries, etc.)
         - Be extremely concise - most users only scan changelogs
-        - Only describe changes that are actually present in the commit data
+        - Only describe changes that are actually present in the code diffs
 
-        GOOD EXAMPLE:
-        **Faster Search Results**
+        GOOD EXAMPLE (if the diffs show form validation changes):
+        **Improved Form Validation**
 
-        We've improved how search works across the platform. Results now appear more quickly and are more relevant to what you're looking for.
+        We've enhanced how forms handle your input, making it clearer when you need to correct something.
 
         What's the Impact?
-        Search results appear as you type, saving you time
-        More accurate matches put what you need at the top of the list
-        Historical content is now included in search results
+        You'll see instant feedback when entering information incorrectly
+        Error messages are now more helpful and specific
+        Forms prevent submission until all required fields are valid
 
-        BAD EXAMPLE (INACCURATE):
+        BAD EXAMPLE (making assumptions):
         **Complete UI Overhaul**
 
         We've redesigned the entire interface with a fresh look and feel. The application now includes dark mode, improved search, and a new dashboard.
@@ -119,7 +131,7 @@ export async function POST(request: Request) {
         Dark mode reduces eye strain when working at night
         New dashboard gives you quick access to all features in one place
 
-        (This would be BAD if the commits only showed minor UI tweaks to one component)
+        (This would be BAD if the diffs only showed minor CSS tweaks to one component)
         `;
 
       console.log("Calling OpenAI API");
