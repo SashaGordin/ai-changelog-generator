@@ -83,5 +83,5 @@ pnpm dev
 
 ## Demo
 
-[Click here to see the demo!](https://www.loom.com/share/334b3cfba83845baa9d772c2de72074a?sid=21dbba3d-f1ec-4a80-ab2e-f36e7c8d8ad9)
+[Click here to see the demo!](https://www.loom.com/share/c9a4cd220184434384765702516db177?sid=0c7bf722-990d-490a-9271-20f4e17b47e3)
 
