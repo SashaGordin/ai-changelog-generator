@@ -192,13 +192,15 @@ The most important controls are more prominently displayed`;
       }
 
       const date = new Date();
-      const month = date.toLocaleString('default', { month: 'long' });
-      const year = date.getFullYear();
+      // Use UTC methods to ensure consistent date formatting between server and client
+      const month = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(date);
+      const year = date.getUTCFullYear();
 
       console.log("Sending response with", entries.length, "entries");
       return NextResponse.json({
         changelog: {
           title: `${month}, ${year}`,
+          // Use ISO string for consistent date representation
           date: date.toISOString(),
           type: type || "Feature",
           changes,

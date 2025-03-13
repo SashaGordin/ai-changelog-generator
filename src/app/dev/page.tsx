@@ -519,7 +519,12 @@ export default function DevPage() {
                         ))}
                         {changelogDraft.date && (
                           <span className="text-sm text-gray-500">
-                            {new Date(changelogDraft.date).toLocaleDateString()}
+                            {new Date(changelogDraft.date).toLocaleDateString('en-US', {
+                              timeZone: 'UTC',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
                           </span>
                         )}
                       </div>
