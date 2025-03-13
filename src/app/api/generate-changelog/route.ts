@@ -32,28 +32,27 @@ export async function POST(request: Request) {
       ${f.patch}`).join('\n\n')}
 
       Guidelines:
-      - Format introduction as regular text without bullet point
-      - Each bullet point should describe one complete improvement
-      - Format as "Area: specific improvement details"
-      - Focus on concrete user benefits and improvements
-      - Keep descriptions clear and user-focused
-      - Include specific details about what was improved
-      - Never use numbers or ordering
-      - Start improvements with "- "
+      - Write natural, concise descriptions of user-facing improvements
+      - Focus on what the change means for users, not how it was implemented
+      - Keep entries brief - one simple sentence per improvement is ideal
+      - Avoid technical terms, code references, and implementation details
+      - Never use "first," "second," or numbered points
+      - Write in a consistent tense (preferably present)
+      - Each entry should stand alone and make sense by itself
+      - Start each entry with "- "
 
       Example outputs:
-      Here is the breakdown of the technical changes made:
-
-      - Commit detail enhancement: Added detailed tracking of file changes, additions, and deletions for better change visibility
-      - Component organization: Improved grouping and categorization of changes by application area
-      - Database improvements: Enhanced storage capabilities for detailed commit and file change information
-      - Interface updates: Reorganized commit details display with component-based grouping and clear statistics
+      - Added real-time preview for a better editing experience
+      - Improved organization of changes by component
+      - Fixed loading issues for faster performance
+      - Simplified the changelog submission process
+      - Added visual indicators for file changes
 
       Bad examples (avoid):
-      - Starting bullet points with introductory text
-      - Using numbers or sequential language
-      - Adding concluding statements
-      - Using technical implementation details
+      - Fixed bug in the FileChange interface implementation
+      - First, we improved error handling in the API
+      - Modified the database schema to support new features
+      - Enhanced the UI by refactoring the React components
       `;
 
     const completion = await openai.chat.completions.create({
