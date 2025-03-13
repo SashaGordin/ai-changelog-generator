@@ -73,7 +73,7 @@ export default function DevPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedBadges, setSelectedBadges] = useState<Record<number, string[]>>({});
+  const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
 
   const fetchCommits = async () => {
     setIsFetchingCommits(true);
@@ -127,18 +127,12 @@ export default function DevPage() {
     }
   };
 
-  const toggleBadgeForEntry = (entryIndex: number, badge: string) => {
-    setSelectedBadges(prev => {
-      const current = prev[entryIndex] || [];
-      const updated = current.includes(badge)
-        ? current.filter(b => b !== badge)
-        : [...current, badge];
-
-      return {
-        ...prev,
-        [entryIndex]: updated
-      };
-    });
+  const toggleBadge = (badge: string) => {
+    setSelectedBadges(prev =>
+      prev.includes(badge)
+        ? prev.filter(b => b !== badge)
+        : [...prev, badge]
+    );
   };
 
   const submitChangelog = async () => {
@@ -170,14 +164,14 @@ export default function DevPage() {
         return;
       }
 
-      // Use enhanced entries if available, otherwise generate simple entries from changes
+      // Update entries to share the same selected badges across all entries
       const entries = validChanges.map((change, index) => ({
         content: change,
         order: index,
-        // Apply any selected badges as components
-        component: selectedBadges[index]?.[0] || undefined,
-        // If multiple badges, use the second as scope
-        scope: selectedBadges[index]?.[1] || undefined,
+        // Apply the global component to all entries
+        component: selectedBadges[0] || detectComponent(change),
+        // If there's more badges, use the second as scope
+        scope: selectedBadges.length > 1 ? selectedBadges[1] : undefined,
         impact: detectImpact(change),
         isTechnical: false,
         isUserFacing: true
@@ -350,13 +344,18 @@ export default function DevPage() {
 
         {changelogDraft && (
           <div className="mt-6">
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex flex-col mb-3">
               <div>
                 <h2 className="text-xl font-semibold">{changelogDraft.title}</h2>
                 <div className="flex items-center mt-2 space-x-2">
                   <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800 font-medium">
                     {selectedType}
                   </span>
+                  {selectedBadges.map(badge => (
+                    <span key={badge} className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700">
+                      {badge}
+                    </span>
+                  ))}
                   {changelogDraft.date && (
                     <span className="text-sm text-gray-500">
                       {new Date(changelogDraft.date).toLocaleDateString()}
@@ -364,7 +363,32 @@ export default function DevPage() {
                   )}
                 </div>
               </div>
-              <SwitchViewButton />
+              <div className="flex justify-between items-center mt-3">
+                <div className="flex-1">
+                  <div className="mt-4 mb-6">
+                    <div className="text-sm font-medium text-gray-700 mb-2">Categorize your changes:</div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {availableFeatureBadges.map(badge => (
+                        <button
+                          key={badge}
+                          onClick={() => toggleBadge(badge)}
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            selectedBadges.includes(badge)
+                              ? 'bg-gray-200 text-gray-800 ring-2 ring-gray-400'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {badge}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Selected badges will appear in the public changelog
+                    </div>
+                  </div>
+                </div>
+                <SwitchViewButton />
+              </div>
             </div>
 
             <div className="prose max-w-none">
@@ -373,11 +397,11 @@ export default function DevPage() {
                   (change.includes('breakdown') || change.includes('following') || change.includes('changes made'));
 
                 return (
-                  <div key={index} className={`${isIntroLine ? 'mb-4' : 'ml-5 list-disc'} group`}>
+                  <div key={index} className={`${isIntroLine ? 'mb-4' : 'p-3 border rounded-md mb-4 bg-gray-50'} group`}>
                     <div
                       contentEditable={isEditing}
                       suppressContentEditableWarning
-                      className={`text-gray-700 ${isEditing ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 -mx-1 border-dashed border border-transparent hover:border-gray-300' : ''}`}
+                      className={`text-gray-700 ${isEditing ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 py-1 border border-gray-200 bg-white' : ''}`}
                       onBlur={(e) => {
                         if (!isEditing) return;
                         const newChanges = [...changelogDraft.changes];
@@ -394,32 +418,6 @@ export default function DevPage() {
                     >
                       {isIntroLine ? change : (change.startsWith('- ') ? change : `- ${change}`)}
                     </div>
-
-                    {isEditing && !isIntroLine && (
-                      <div className="ml-2 mt-1 mb-3">
-                        <div className="text-xs text-gray-500 mb-1">Feature badges:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {availableFeatureBadges.map(badge => (
-                            <button
-                              key={badge}
-                              onClick={() => toggleBadgeForEntry(index, badge)}
-                              className={`text-xs px-2 py-0.5 rounded-full ${
-                                selectedBadges[index]?.includes(badge)
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                            >
-                              {badge}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          {selectedBadges[index]?.length
-                            ? `Selected: ${selectedBadges[index].join(', ')}`
-                            : 'No badges selected'}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -461,6 +459,43 @@ export default function DevPage() {
       </div>
     </>
   );
+}
+
+// Helper function to guess component
+function detectComponent(content: string): string | undefined {
+  const lowerContent = content.toLowerCase();
+
+  // Product features - match the same logic as in the API
+  if (lowerContent.includes('analytics') || lowerContent.includes('stats') || lowerContent.includes('metrics'))
+    return 'Analytics';
+  if (lowerContent.includes('auth') || lowerContent.includes('login') || lowerContent.includes('sign in'))
+    return 'Authentication';
+  if (lowerContent.includes('api') || lowerContent.includes('integration') || lowerContent.includes('connect'))
+    return 'API Integration';
+  if (lowerContent.includes('content') || lowerContent.includes('editor') || lowerContent.includes('cms'))
+    return 'Content Management';
+  if (lowerContent.includes('dashboard'))
+    return 'Dashboards';
+  if (lowerContent.includes('visualiz') || lowerContent.includes('chart') || lowerContent.includes('graph'))
+    return 'Data Visualization';
+  if (lowerContent.includes('email') || lowerContent.includes('notification') || lowerContent.includes('alert'))
+    return 'Email Notifications';
+  if (lowerContent.includes('filter') || lowerContent.includes('sort') || lowerContent.includes('search'))
+    return 'Filtering';
+  if (lowerContent.includes('performance') || lowerContent.includes('speed') || lowerContent.includes('optimize'))
+    return 'Performance Optimization';
+  if (lowerContent.includes('report') || lowerContent.includes('export'))
+    return 'Reporting';
+  if (lowerContent.includes('search'))
+    return 'Search';
+  if (lowerContent.includes('security') || lowerContent.includes('protect') || lowerContent.includes('privacy'))
+    return 'Security Features';
+  if (lowerContent.includes('user experience') || lowerContent.includes('ux') || lowerContent.includes('workflow'))
+    return 'User Experience';
+  if (lowerContent.includes('ui') || lowerContent.includes('interface') || lowerContent.includes('display'))
+    return 'User Interface';
+
+  return undefined;
 }
 
 // Helper function to guess impact level

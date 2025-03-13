@@ -13,36 +13,6 @@ const typeColors: Record<ChangeType, { bg: string; text: string }> = {
   Security: { bg: "bg-purple-100", text: "text-purple-800" },
 };
 
-// Impact level colors
-const impactColors = {
-  major: { bg: "bg-purple-100", text: "text-purple-800" },
-  minor: { bg: "bg-blue-100", text: "text-blue-800" },
-  patch: { bg: "bg-gray-100", text: "text-gray-800" },
-};
-
-// Component colors - more product-focused
-const componentColors: Record<string, { bg: string; text: string }> = {
-  // Core platform features
-  "Analytics": { bg: "bg-purple-100", text: "text-purple-800" },
-  "Authentication": { bg: "bg-red-100", text: "text-red-800" },
-  "API Integration": { bg: "bg-emerald-100", text: "text-emerald-800" },
-  "Content Management": { bg: "bg-amber-100", text: "text-amber-800" },
-  "Dashboards": { bg: "bg-indigo-100", text: "text-indigo-800" },
-  "Data Visualization": { bg: "bg-cyan-100", text: "text-cyan-800" },
-  "Email Notifications": { bg: "bg-blue-100", text: "text-blue-800" },
-  "Filtering": { bg: "bg-teal-100", text: "text-teal-800" },
-  "Performance Optimization": { bg: "bg-orange-100", text: "text-orange-800" },
-  "Reporting": { bg: "bg-violet-100", text: "text-violet-800" },
-  "Search": { bg: "bg-lime-100", text: "text-lime-800" },
-  "Security Features": { bg: "bg-red-100", text: "text-red-800" },
-  "User Experience": { bg: "bg-pink-100", text: "text-pink-800" },
-  "User Interface": { bg: "bg-indigo-100", text: "text-indigo-800" },
-  // Legacy technical components (for backward compatibility)
-  "UI": { bg: "bg-indigo-100", text: "text-indigo-800" },
-  "API": { bg: "bg-emerald-100", text: "text-emerald-800" },
-  "Database": { bg: "bg-amber-100", text: "text-amber-800" },
-};
-
 export default async function ChangelogPage({
   searchParams,
 }: {
@@ -51,8 +21,6 @@ export default async function ChangelogPage({
   // Get filter parameters - ensure searchParams is properly resolved
   const params = await searchParams;
   const componentFilter = params.component as string | undefined;
-  const impactFilter = params.impact as string | undefined;
-  const scopeFilter = params.scope as string | undefined;
   const userFacingOnly = params.userFacing === 'true';
 
   // Get all changelogs
@@ -67,14 +35,6 @@ export default async function ChangelogPage({
       // Add optional conditions
       if (componentFilter && componentFilter.length > 0) {
         conditions.push(eq(changelogEntries.component!, componentFilter));
-      }
-
-      if (impactFilter && impactFilter.length > 0) {
-        conditions.push(eq(changelogEntries.impact!, impactFilter));
-      }
-
-      if (scopeFilter && scopeFilter.length > 0) {
-        conditions.push(eq(changelogEntries.scope!, scopeFilter));
       }
 
       if (userFacingOnly) {
@@ -109,10 +69,9 @@ export default async function ChangelogPage({
     return acc;
   }, {} as Record<string, typeof filteredLogs>);
 
-  // Get unique components and scopes for filter options
+  // Get unique components for filter options
   const allEntries = await db.select().from(changelogEntries);
   const components = [...new Set(allEntries.map(e => e.component).filter(Boolean))];
-  const impacts = [...new Set(allEntries.map(e => e.impact).filter(Boolean))];
 
   return (
     <>
@@ -132,7 +91,7 @@ export default async function ChangelogPage({
                       href={`/changelog?component=${component}`}
                       className={`text-xs px-2.5 py-1 rounded-full ${
                         componentFilter === component
-                          ? `${componentColors[component as keyof typeof componentColors]?.bg || 'bg-gray-200'} ${componentColors[component as keyof typeof componentColors]?.text || 'text-gray-800'}`
+                          ? 'bg-gray-200 text-gray-800'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -149,24 +108,6 @@ export default async function ChangelogPage({
                   </Link>
                 )}
               </div>
-
-              <div className="flex gap-2 justify-end">
-                {impacts.map(impact => (
-                  impact && (
-                    <Link
-                      key={impact}
-                      href={`/changelog?impact=${impact}`}
-                      className={`text-xs px-2.5 py-1 rounded-full ${
-                        impactFilter === impact
-                          ? `${impactColors[impact as keyof typeof impactColors]?.bg || 'bg-gray-200'} ${impactColors[impact as keyof typeof impactColors]?.text || 'text-gray-800'}`
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {impact}
-                    </Link>
-                  )
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -180,16 +121,33 @@ export default async function ChangelogPage({
                 const date = new Date(log.createdAt);
                 const colors = typeColors[log.type as ChangeType] || typeColors.Feature;
 
+                // Get unique components from the changelog entries
+                const changelogComponents = [...new Set(
+                  (log.entries || [])
+                    .map(entry => entry.component)
+                    .filter(Boolean)
+                )] as string[];
+
                 return (
                   <div key={log.id} className="flex gap-6">
                     <div className="flex-none w-20 text-sm text-gray-500">
                       {date.toLocaleDateString('default', { day: '2-digit' })}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-2 mb-4 flex-wrap">
                         <span className={`px-2 py-0.5 text-xs font-medium rounded ${colors.bg} ${colors.text}`}>
                           {log.type}
                         </span>
+
+                        {/* Display changelog-level badges with gray background */}
+                        {changelogComponents.map(component => (
+                          component && (
+                            <span key={component} className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-700">
+                              {component}
+                            </span>
+                          )
+                        ))}
+
                         {log.title !== title && (
                           <span className="text-sm text-gray-500">
                             {log.title}
@@ -201,40 +159,8 @@ export default async function ChangelogPage({
                       {log.entries ? (
                         <div className="space-y-2">
                           {log.entries.map((entry) => (
-                            <div key={entry.id} className="flex gap-2 items-start">
-                              <div className="flex-1 text-gray-800">{entry.content}</div>
-
-                              <div className="flex gap-1 flex-wrap">
-                                {entry.component && (
-                                  <span className={`px-1.5 py-0.5 text-xs rounded ${
-                                    componentColors[entry.component as keyof typeof componentColors]?.bg || 'bg-gray-100'
-                                  } ${
-                                    componentColors[entry.component as keyof typeof componentColors]?.text || 'text-gray-700'
-                                  }`}>
-                                    {entry.component}
-                                  </span>
-                                )}
-
-                                {entry.scope && entry.scope !== entry.component && (
-                                  <span className={`px-1.5 py-0.5 text-xs rounded ${
-                                    componentColors[entry.scope as keyof typeof componentColors]?.bg || 'bg-gray-100'
-                                  } ${
-                                    componentColors[entry.scope as keyof typeof componentColors]?.text || 'text-gray-700'
-                                  }`}>
-                                    {entry.scope}
-                                  </span>
-                                )}
-
-                                {entry.impact && (
-                                  <span className={`px-1.5 py-0.5 text-xs rounded ${
-                                    impactColors[entry.impact as keyof typeof impactColors]?.bg || 'bg-gray-100'
-                                  } ${
-                                    impactColors[entry.impact as keyof typeof impactColors]?.text || 'text-gray-700'
-                                  }`}>
-                                    {entry.impact}
-                                  </span>
-                                )}
-                              </div>
+                            <div key={entry.id} className="text-gray-800">
+                              {entry.content}
                             </div>
                           ))}
                         </div>
