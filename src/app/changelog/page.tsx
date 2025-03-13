@@ -121,12 +121,25 @@ export default async function ChangelogPage({
                 const date = new Date(log.createdAt);
                 const colors = typeColors[log.type as ChangeType] || typeColors.Feature;
 
-                // Get unique components from the changelog entries
-                const changelogComponents = [...new Set(
-                  (log.entries || [])
-                    .map(entry => entry.component)
-                    .filter(Boolean)
-                )] as string[];
+                // Extract all badges from labels field (which is stored as JSON)
+                const allBadges = (log.entries || []).flatMap(entry => {
+                  // Try to parse the labels field if it exists
+                  if (entry.labels) {
+                    try {
+                      return JSON.parse(entry.labels as string) as string[];
+                    } catch {
+                      return [];
+                    }
+                  }
+                  // Fallback to component for older entries
+                  else if (entry.component) {
+                    return [entry.component];
+                  }
+                  return [];
+                });
+
+                // Get unique badges
+                const changelogBadges = [...new Set(allBadges)];
 
                 return (
                   <div key={log.id} className="flex gap-6">
@@ -139,11 +152,11 @@ export default async function ChangelogPage({
                           {log.type}
                         </span>
 
-                        {/* Display changelog-level badges with gray background */}
-                        {changelogComponents.map(component => (
-                          component && (
-                            <span key={component} className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-700">
-                              {component}
+                        {/* Display all badges with gray background */}
+                        {changelogBadges.map(badge => (
+                          badge && (
+                            <span key={badge} className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-700">
+                              {badge}
                             </span>
                           )
                         ))}

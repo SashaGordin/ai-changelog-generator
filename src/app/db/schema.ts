@@ -19,6 +19,7 @@ export const changelogEntries = pgTable("changelog_entries", {
   isTechnical: boolean("is_technical").default(false),
   isUserFacing: boolean("is_user_facing").default(true),
   order: integer("order").default(0),
+  labels: text("labels"), // Store all badges/labels as JSON string
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

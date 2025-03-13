@@ -165,17 +165,19 @@ export default function DevPage() {
       }
 
       // Update entries to share the same selected badges across all entries
-      const entries = validChanges.map((change, index) => ({
-        content: change,
-        order: index,
-        // Apply the global component to all entries
-        component: selectedBadges[0] || detectComponent(change),
-        // If there's more badges, use the second as scope
-        scope: selectedBadges.length > 1 ? selectedBadges[1] : undefined,
-        impact: detectImpact(change),
-        isTechnical: false,
-        isUserFacing: true
-      }));
+      const entries = validChanges.map((change, index) => {
+        return {
+          content: change,
+          order: index,
+          // Store all badges together as a JSON string in one field
+          labels: selectedBadges.length > 0 ? JSON.stringify(selectedBadges) : null,
+          // Keep component for backward compatibility with existing filters
+          component: selectedBadges.length > 0 ? selectedBadges[0] : detectComponent(change),
+          impact: detectImpact(change),
+          isTechnical: false,
+          isUserFacing: true
+        };
+      });
 
       // Keep content field for backward compatibility
       const content = validChanges.join('\n');
