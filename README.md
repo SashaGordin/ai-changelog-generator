@@ -89,10 +89,6 @@ pnpm dev
 
 - 🎯 Improved accuracy of changelog entries by enhancing the AI prompt to focus on actual code changes
 - 🏷️ Replaced automatic component detection with user-selected feature badges for better categorization
-- 🎨 Enhanced bullet point formatting for better readability
-- 📝 Simplified data model by removing unused fields (component, scope, impact)
-- 🔄 Fixed hydration issues with consistent date formatting
-- ⚡️ Optimized code by removing unused functions and streamlining the codebase
 
 ## Demo
 
