@@ -88,6 +88,7 @@ export default function DevPage() {
 
     if (titleMatch && impactIndex > -1) {
       const startIndex = titleMatch[0].length;
+      // Return the trimmed substring
       return content.substring(startIndex, impactIndex).trim();
     } else if (titleMatch) {
       // If there's no impact section
