@@ -32,6 +32,15 @@ interface ChangelogDraft {
   date: string;
   type: ChangeType;
   changes: string[];
+  entries?: {
+    content: string;
+    component?: string;
+    scope?: string;
+    impact?: string;
+    isTechnical?: boolean;
+    isUserFacing?: boolean;
+    order?: number;
+  }[];
 }
 
 const changeTypes: ChangeType[] = ["Feature", "Update", "Fix", "Breaking", "Security"];
@@ -128,6 +137,13 @@ export default function DevPage() {
         return;
       }
 
+      // Use enhanced entries if available, otherwise generate simple entries from changes
+      const entries = changelogDraft.entries || validChanges.map((change, index) => ({
+        content: change,
+        order: index
+      }));
+
+      // Keep content field for backward compatibility
       const content = validChanges.join('\n');
 
       // Ensure all commits have the required fields
@@ -144,6 +160,7 @@ export default function DevPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content,
+          entries,
           commits: validCommits,
           repoUrl,
           type: selectedType || "Feature",
