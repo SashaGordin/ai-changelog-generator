@@ -34,6 +34,7 @@ interface ChangelogEntry {
   isTechnical?: boolean;
   isUserFacing?: boolean;
   order?: number;
+  labels?: string;
 }
 
 const validChangeTypes = ["Feature", "Update", "Fix", "Breaking", "Security"] as const;
@@ -117,7 +118,8 @@ export async function POST(request: Request) {
               impact: entry.impact || "minor",
               isTechnical: entry.isTechnical || false,
               isUserFacing: entry.isUserFacing || true,
-              order: entry.order || index
+              order: entry.order || index,
+              labels: entry.labels
             })
             .returning();
           return insertedEntry;

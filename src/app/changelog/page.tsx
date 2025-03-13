@@ -5,6 +5,21 @@ import type { ChangeType } from "../api/generate-changelog/route";
 import SwitchViewButton from "@/app/components/SwitchViewButton";
 import Link from "next/link";
 
+// Define an interface for changelog entries including the labels field
+interface ChangelogEntry {
+  id: number;
+  changelogId: number;
+  content: string;
+  component: string | null;
+  scope: string | null;
+  impact: string | null;
+  isTechnical: boolean | null;
+  isUserFacing: boolean | null;
+  order: number | null;
+  labels: string | null;
+  createdAt: Date;
+}
+
 const typeColors: Record<ChangeType, { bg: string; text: string }> = {
   Feature: { bg: "bg-green-100", text: "text-green-800" },
   Update: { bg: "bg-blue-100", text: "text-blue-800" },
@@ -32,16 +47,45 @@ export default async function ChangelogPage({
       // Create an array of conditions
       const conditions = [eq(changelogEntries.changelogId, log.id)];
 
-      // Add optional conditions
+      // Add optional conditions for filtering
       if (componentFilter && componentFilter.length > 0) {
-        conditions.push(eq(changelogEntries.component!, componentFilter));
+        // We need to expand the query to check both component field and labels field
+        const entries = await db
+          .select()
+          .from(changelogEntries)
+          .where(eq(changelogEntries.changelogId, log.id))
+          .orderBy(changelogEntries.order);
+
+        // Filter entries that have the component either in component field or in labels
+        const filteredEntries = entries.filter(entry => {
+          // Check direct component match
+          if (entry.component === componentFilter) return true;
+
+          // Check if component is in the labels JSON
+          if (entry.labels) {
+            try {
+              const labels = JSON.parse(entry.labels as string) as string[];
+              return labels.includes(componentFilter);
+            } catch {
+              return false;
+            }
+          }
+
+          return false;
+        });
+
+        return {
+          ...log,
+          entries: filteredEntries.length > 0 ? filteredEntries : null
+        };
       }
 
+      // If no component filter or it's not in labels, apply standard filtering
       if (userFacingOnly) {
         conditions.push(eq(changelogEntries.isUserFacing, true));
       }
 
-      // Execute query with all conditions
+      // Execute query with all conditions if no special filtering was applied
       const entries = await db
         .select()
         .from(changelogEntries)
@@ -69,9 +113,57 @@ export default async function ChangelogPage({
     return acc;
   }, {} as Record<string, typeof filteredLogs>);
 
-  // Get unique components for filter options
+  // Get unique components and labels for filter options
   const allEntries = await db.select().from(changelogEntries);
-  const components = [...new Set(allEntries.map(e => e.component).filter(Boolean))];
+
+  // Extract all unique badges from both component and labels fields
+  const allLabels = allEntries.flatMap(entry => {
+    const badges = [];
+
+    // Add component if it exists
+    if (entry.component) badges.push(entry.component);
+
+    // Add all labels from the labels JSON field
+    if (entry.labels) {
+      try {
+        const parsedLabels = JSON.parse(entry.labels as string) as string[];
+        badges.push(...parsedLabels);
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+
+    return badges;
+  });
+
+  // Get unique components for filter options
+  const components = [...new Set(allLabels.filter(Boolean))];
+
+  // Helper to extract all badges from entries
+  function getBadgesFromEntries(entries: ChangelogEntry[] | null): string[] {
+    if (!entries || entries.length === 0) return [];
+
+    const allBadges = new Set<string>();
+
+    entries.forEach(entry => {
+      // Try to get badges from labels field first
+      if (entry.labels) {
+        try {
+          const parsedLabels = JSON.parse(entry.labels as string) as string[];
+          parsedLabels.forEach(label => allBadges.add(label));
+        } catch {
+          // If parsing fails, fall back to component
+          if (entry.component) allBadges.add(entry.component);
+        }
+      }
+      // Fall back to component field for older entries
+      else if (entry.component) {
+        allBadges.add(entry.component);
+      }
+    });
+
+    return Array.from(allBadges);
+  }
 
   return (
     <>
@@ -121,25 +213,8 @@ export default async function ChangelogPage({
                 const date = new Date(log.createdAt);
                 const colors = typeColors[log.type as ChangeType] || typeColors.Feature;
 
-                // Extract all badges from labels field (which is stored as JSON)
-                const allBadges = (log.entries || []).flatMap(entry => {
-                  // Try to parse the labels field if it exists
-                  if (entry.labels) {
-                    try {
-                      return JSON.parse(entry.labels as string) as string[];
-                    } catch {
-                      return [];
-                    }
-                  }
-                  // Fallback to component for older entries
-                  else if (entry.component) {
-                    return [entry.component];
-                  }
-                  return [];
-                });
-
-                // Get unique badges
-                const changelogBadges = [...new Set(allBadges)];
+                // Get unique badges using our helper function
+                const changelogBadges = getBadgesFromEntries(log.entries as ChangelogEntry[] | null);
 
                 return (
                   <div key={log.id} className="flex gap-6">
