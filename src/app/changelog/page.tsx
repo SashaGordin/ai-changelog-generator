@@ -34,8 +34,11 @@ function formatContent(content: string): React.ReactNode {
   // Split content by line breaks
   const lines = content.split('\n');
 
+  // Track whether we're in the impact section
+  let inImpactSection = false;
+
   return lines.map((line, index) => {
-    // Handle any bold text, though we're using less of it in the new format
+    // Handle any bold text
     const boldPattern = /\*\*(.+?)\*\*/g;
     const parts = [];
     let lastIndex = 0;
@@ -67,8 +70,9 @@ function formatContent(content: string): React.ReactNode {
       return <div key={`line-${index}`} className="h-4"></div>;
     }
 
-    // Special handling for What's the Impact? section
+    // Check if this is the "What's the Impact?" header
     if (line.includes("What's the Impact?")) {
+      inImpactSection = true;
       return (
         <div key={`line-${index}`} className="mt-3 mb-2 font-semibold text-gray-800">
           {parts.length > 0 ? parts : line}
@@ -76,12 +80,17 @@ function formatContent(content: string): React.ReactNode {
       );
     }
 
-    // If line starts with a dash, make it a bullet point
-    if (line.trim().startsWith('-')) {
+    // Handle bullet points - both explicit ones starting with dash and all lines in impact section
+    if (line.trim().startsWith('-') || (inImpactSection && line.trim() !== '')) {
+      // For existing bullet points, remove the dash
+      const lineContent = line.trim().startsWith('-') ? line.substring(2).trim() : line.trim();
+
       return (
         <div key={`line-${index}`} className="flex items-start mb-3 pl-1">
           <span className="mr-2 text-blue-500 flex-shrink-0">•</span>
-          <div className="text-gray-700">{parts.length > 0 ? parts : line.substring(1).trim()}</div>
+          <div className="text-gray-700">
+            {parts.length > 0 ? parts : lineContent}
+          </div>
         </div>
       );
     }

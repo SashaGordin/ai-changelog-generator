@@ -84,9 +84,9 @@ export async function POST(request: Request) {
         We've improved how search works across the platform. Results now appear more quickly and are more relevant to what you're looking for.
 
         What's the Impact?
-        - Search results appear as you type, saving you time
-        - More accurate matches put what you need at the top of the list
-        - Historical content is now included in search results
+        Search results appear as you type, saving you time
+        More accurate matches put what you need at the top of the list
+        Historical content is now included in search results
 
         BAD EXAMPLE (TOO TECHNICAL):
         **Search Algorithm Update**
@@ -94,9 +94,9 @@ export async function POST(request: Request) {
         The search functionality was enhanced by implementing a new indexing algorithm. We replaced the previous search system with a more efficient solution that processes queries asynchronously.
 
         What's the Impact?
-        - The algorithm now uses Levenshtein distance to compute string similarity
-        - Search results are cached in Redis for 15 minutes
-        - Query normalization improves match accuracy by 27%
+        The algorithm now uses Levenshtein distance to compute string similarity
+        Search results are cached in Redis for 15 minutes
+        Query normalization improves match accuracy by 27%
         `;
 
       console.log("Calling OpenAI API");
@@ -140,8 +140,8 @@ export async function POST(request: Request) {
 We've updated the changelog system to provide clearer, more user-focused information about updates. The new format better highlights what matters to you and how changes affect your work.
 
 **What's the Impact?**
-- Changes are summarized with a clear title and concise explanation
-- Important impacts to your workflow are highlighted with bullet points`;
+Changes are summarized with a clear title and concise explanation
+Important impacts to your workflow are highlighted with bullet points`;
 
         entries = [{
           content: mockEntry,
