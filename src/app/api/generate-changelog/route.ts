@@ -55,44 +55,48 @@ export async function POST(request: Request) {
 
       console.log("Preparing OpenAI prompt");
       const prompt = `
-        Technical changes to analyze:
-        ${fileDetails.map(f => `
-        Changes: ${f.changes}
-        Diff preview:
-        ${f.patch}`).join('\n\n')}
+        I need you to create a concise, user-friendly changelog entry based on these code changes.
 
-        Guidelines:
-        Create a comprehensive, user-friendly changelog entry in the following format:
+        CONTEXT (Technical details for reference only - DO NOT mention these in the output):
+        ${fileDetails.map(f => `File: ${f.path}`).join('\n')}
 
-        1. **Title**: Start with a bold, concise title that summarizes the key change or feature (e.g., "Enhanced User Interface for Better Navigation")
+        YOUR TASK:
+        Create a simple changelog entry focused only on what users would care about.
 
-        2. **Summary Paragraph**: Provide a 2-3 sentence overview explaining what's changing, why it matters, and when it's happening.
+        REQUIRED FORMAT:
+        1. **Bold Title**: A 3-5 word title that captures the essence of the change
 
-        3. **Impact Section**: Include a "What's the Impact?" section that clearly explains:
-           - What users will experience during the change
-           - What benefits they'll see after the change
-           - Any temporary disruptions or changes to workflow
+        2. One SHORT paragraph (2-3 sentences maximum) explaining what changed in simple,
+           non-technical language. Focus on what users can now do or how their experience improved.
 
-        4. **Next Steps**: If applicable, suggest what users should do to take advantage of the changes.
+        3. "What's the Impact?" section with 2-3 bullet points highlighting the specific benefits to users.
+           Each bullet should be a single sentence, focused on outcomes, not implementation.
 
-        Important guidelines:
-        - Focus on user benefits rather than technical implementation
-        - Use clear, non-technical language
-        - Be specific about any changes to user workflow
-        - Mention timing of changes when relevant
-        - Include any limitations or caveats users should be aware of
+        IMPORTANT GUIDELINES:
+        - Use everyday language anyone can understand
+        - Focus 100% on user benefits and experience changes
+        - NEVER mention technical implementation details (code, libraries, etc.)
+        - Be extremely concise - most users only scan changelogs
 
-        Example format:
-        **[Title of Change]**
+        GOOD EXAMPLE:
+        **Faster Search Results**
 
-        [Summary paragraph explaining the change, why it's happening, and when it takes effect]
+        We've improved how search works across the platform. Results now appear more quickly and are more relevant to what you're looking for.
 
-        **What's the Impact?**
-        - [Bullet point explaining specific benefit or change]
-        - [Bullet point explaining another impact]
+        What's the Impact?
+        - Search results appear as you type, saving you time
+        - More accurate matches put what you need at the top of the list
+        - Historical content is now included in search results
 
-        **Next Steps**
-        - [Any action items for users]
+        BAD EXAMPLE (TOO TECHNICAL):
+        **Search Algorithm Update**
+
+        The search functionality was enhanced by implementing a new indexing algorithm. We replaced the previous search system with a more efficient solution that processes queries asynchronously.
+
+        What's the Impact?
+        - The algorithm now uses Levenshtein distance to compute string similarity
+        - Search results are cached in Redis for 15 minutes
+        - Query normalization improves match accuracy by 27%
         `;
 
       console.log("Calling OpenAI API");
@@ -130,19 +134,14 @@ export async function POST(request: Request) {
         // Fallback for testing: generate mock entries without calling OpenAI
         console.log("Using fallback mock generation for testing");
 
-        // Create a more detailed mock entry in the Twilio format
-        const mockEntry = `**Enhanced Changelog Experience with Product Labels**
+        // Create a more simplified mock entry for testing
+        const mockEntry = `**Improved Changelog Display**
 
-Starting today, we're upgrading our changelog system to provide more detailed and relevant information about product updates. This change will make it easier to understand what areas of the platform are being improved and how these changes might affect your workflow.
+We've updated the changelog system to provide clearer, more user-focused information about updates. The new format better highlights what matters to you and how changes affect your work.
 
 **What's the Impact?**
-- Product-focused labels now clearly indicate which features are being updated
-- Improved organization of changelog entries makes it easier to find relevant updates
-- Enhanced description format provides more context about changes and their benefits
-
-**Next Steps**
-- No action required - the new format is automatically applied to all changelog entries
-- Visit the changelog page to see the new format in action`;
+- Changes are summarized with a clear title and concise explanation
+- Important impacts to your workflow are highlighted with bullet points`;
 
         entries = [{
           content: mockEntry,

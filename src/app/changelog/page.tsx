@@ -35,7 +35,7 @@ function formatContent(content: string): React.ReactNode {
   const lines = content.split('\n');
 
   return lines.map((line, index) => {
-    // Handle bold text (wrapped in **)
+    // Handle any bold text, though we're using less of it in the new format
     const boldPattern = /\*\*(.+?)\*\*/g;
     const parts = [];
     let lastIndex = 0;
@@ -47,8 +47,12 @@ function formatContent(content: string): React.ReactNode {
         parts.push(line.substring(lastIndex, match.index));
       }
 
-      // Add the bold text
-      parts.push(<strong key={`bold-${index}-${match.index}`}>{match[1]}</strong>);
+      // Add the bold text - add special styling for the title (first bold text)
+      if (index === 0) {
+        parts.push(<span key={`bold-${index}-${match.index}`} className="text-lg font-bold text-gray-900">{match[1]}</span>);
+      } else {
+        parts.push(<strong key={`bold-${index}-${match.index}`}>{match[1]}</strong>);
+      }
 
       lastIndex = match.index + match[0].length;
     }
@@ -63,19 +67,28 @@ function formatContent(content: string): React.ReactNode {
       return <div key={`line-${index}`} className="h-4"></div>;
     }
 
-    // If line starts with a dash, make it a bullet point
-    if (line.trim().startsWith('-')) {
+    // Special handling for What's the Impact? section
+    if (line.includes("What's the Impact?")) {
       return (
-        <div key={`line-${index}`} className="flex items-start mb-2">
-          <span className="mr-2">•</span>
-          <div>{parts.length > 0 ? parts : line.substring(1).trim()}</div>
+        <div key={`line-${index}`} className="mt-3 mb-2 font-semibold text-gray-800">
+          {parts.length > 0 ? parts : line}
         </div>
       );
     }
 
-    // Return a regular paragraph with the processed text
+    // If line starts with a dash, make it a bullet point
+    if (line.trim().startsWith('-')) {
+      return (
+        <div key={`line-${index}`} className="flex items-start mb-3 pl-1">
+          <span className="mr-2 text-blue-500 flex-shrink-0">•</span>
+          <div className="text-gray-700">{parts.length > 0 ? parts : line.substring(1).trim()}</div>
+        </div>
+      );
+    }
+
+    // For regular paragraph text, add more spacing for readability
     return (
-      <div key={`line-${index}`} className={`mb-2 ${line.includes('**') && !line.trim().startsWith('**') ? 'mt-4' : ''}`}>
+      <div key={`line-${index}`} className={`mb-4 text-gray-800 leading-relaxed ${index === 0 ? 'mt-2' : ''}`}>
         {parts.length > 0 ? parts : line}
       </div>
     );
